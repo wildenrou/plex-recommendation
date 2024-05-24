@@ -1,52 +1,40 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
-	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
-	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
+	httpinternal "github.com/wgeorgecook/plex-recommendation/internal/pkg/http"
 )
 
-const movieSection = "3"
-
 func main() {
-	fmt.Println("hello!")
-	defer fmt.Println("good bye 👋")
+	log.Println("Hello!")
+	defer log.Println("Good bye!")
 
-	cfg := config.LoadConfig()
-	c := plex.New(cfg.Plex.Token, cfg.Plex.Address)
-	recentlyViewed, err := plex.GetRecentlyPlayed(c, movieSection, cfg.RecentMovieCount)
-	if err != nil {
-		panic(err)
+	// Start the server in a goroutine
+	serverDone := make(chan error, 1)
+	go func() {
+		log.Println("Starting server...")
+		httpinternal.StartServer(config.LoadConfig(), serverDone)
+	}()
+
+	// Set up signal handling
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Block until we receive a signal or the server exits
+	select {
+	case err := <-serverDone:
+		if err != nil {
+			log.Fatalf("Server error: %v", err)
+		} else {
+			log.Println("Server exited gracefully")
+		}
+	case <-quit:
+		log.Println("Shutdown signal received, initiating graceful shutdown...")
+		log.Println("Server shutdown complete")
 	}
-
-	fullCollection, err := plex.GetAllVideos(c, movieSection)
-	if err != nil {
-		panic(err)
-	}
-
-	ollama, err := langchain.InitOllama(cfg.Ollama.Address, cfg.Ollama.Model)
-	if err != nil {
-		panic(err)
-	}
-
-	runSimple := os.Getenv("RUN_SIMPLE")
-	full := runSimple == ""
-	var recommendation string
-	if full {
-
-		recommendation, err = langchain.GenerateRecommendation(context.Background(), recentlyViewed, fullCollection, &ollama)
-
-	} else {
-		recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), &ollama)
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	log.Printf("%s\n", recommendation)
 }

@@ -23,11 +23,15 @@ RUN addgroup -S apprunner && adduser -S apprunner -G apprunner
 
 WORKDIR /app
 
-# Only copy the necessary binary
+# Only copy the necessary binary and environment file
 COPY --from=builder /app/recommendations /app/recommendations
+COPY --from=builder /app/.env /app/.env
 
 # Change ownership to apprunner user
 RUN chown -R apprunner:apprunner /app
+
+# Expose API port
+EXPOSE 8090
 
 # Command to run the application as apprunner user
 USER apprunner
