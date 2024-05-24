@@ -2,6 +2,8 @@ package httpinternal
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +12,14 @@ import (
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 )
+
+type response struct {
+	Response string `json:"response"`
+}
+
+func formatHttpError(err error) []byte {
+	return []byte(fmt.Sprintf(`{"error": "%s"}`, err.Error()))
+}
 
 func getRecommendation(w http.ResponseWriter, r *http.Request) {
 	section := r.PathValue("movieSection")
@@ -21,14 +31,16 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 
 	recentlyViewed, err := plex.GetRecentlyPlayed(plexClient, section, limit)
 	if err != nil {
-		panic(err)
+		w.Write(formatHttpError(err))
+		return
 	}
 
 	rvStr := buildStringFromSlice(recentlyViewed)
 
 	fullCollection, err := plex.GetAllVideos(plexClient, section)
 	if err != nil {
-		panic(err)
+		w.Write(formatHttpError(err))
+		return
 	}
 
 	fcStr := buildStringFromSlice(fullCollection)
@@ -44,8 +56,21 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 		recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), &ollamaLlm)
 	}
 	if err != nil {
-		panic(err)
+		w.Write(formatHttpError(err))
+		return
 	}
 
-	log.Printf("\n%s\n", recommendation)
+	resp := response{
+		Response: recommendation,
+	}
+	respBytes, err := json.Marshal(&resp)
+	if err != nil {
+		w.Write(formatHttpError(err))
+		return
+	}
+
+	_, err = w.Write(respBytes)
+	if err != nil {
+		log.Println("could not write back to client: ", err.Error())
+	}
 }
