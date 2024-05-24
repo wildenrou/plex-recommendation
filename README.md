@@ -28,3 +28,7 @@ the media getters in `internal/pkg/plex/api.go`.
 Download this repository and build the app using 
 `go build -o recommendations ./cmd/main.go`. This builds a binary called
 `recommendations` that you can run with `./recommendations`. 
+
+### Testing this app
+There are several tests in the internal packages that were almost all written by 
+an LLM. You can test this program using `go test ./...` from the root of this repo.
