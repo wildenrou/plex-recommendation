@@ -47,5 +47,5 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	log.Printf("%s\n", recommendation)
+	log.Printf("\n%s\n", recommendation)
 }
