@@ -3,8 +3,7 @@ package plex
 import (
 	"log"
 	"net/http"
-
-	httpinternal "github.com/wgeorgecook/plex-recommendation/internal/pkg/http"
+	"time"
 )
 
 type Client interface {
@@ -22,7 +21,9 @@ func New(accesstoken, address string) *PlexClient {
 	return &PlexClient{
 		accessToken: accesstoken,
 		address:     address,
-		httpClient:  httpinternal.NewClient(),
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 	}
 }
 
