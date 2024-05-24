@@ -11,29 +11,23 @@ import (
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 )
 
+const movieSection = "3"
+
 func main() {
 	fmt.Println("hello!")
 	defer fmt.Println("good bye 👋")
 
 	cfg := config.LoadConfig()
-	log.Printf("config loaded: %+v\n", cfg)
 	c := plex.New(cfg.Plex.Token, cfg.Plex.Address)
-	vids, err := plex.GetRecentlyPlayed(c, "3")
+	recentlyViewed, err := plex.GetRecentlyPlayed(c, movieSection, cfg.RecentMovieCount)
 	if err != nil {
 		panic(err)
 	}
 
-	recentViews := make([]plex.VideoShort, 0, cfg.RecentMovieCount)
-	log.Printf("making shortvid list of length %v\n", cfg.RecentMovieCount)
-	for i, vid := range vids {
-		if i > cfg.RecentMovieCount {
-			break
-		}
-
-		recentViews = append(recentViews, plex.VideoShort{Title: vid.Title, Summary: vid.Summary, ContentRating: vid.ContentRating})
+	fullCollection, err := plex.GetAllVideos(c, movieSection)
+	if err != nil {
+		panic(err)
 	}
-
-	log.Printf("Recent views: %+v\n", recentViews)
 
 	ollama, err := langchain.InitOllama(cfg.Ollama.Address, cfg.Ollama.Model)
 	if err != nil {
@@ -45,7 +39,7 @@ func main() {
 	var recommendation string
 	if full {
 
-		recommendation, err = langchain.GenerateRecommendation(context.Background(), recentViews, &ollama)
+		recommendation, err = langchain.GenerateRecommendation(context.Background(), recentlyViewed, fullCollection, &ollama)
 
 	} else {
 		recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), &ollama)
@@ -54,5 +48,5 @@ func main() {
 		panic(err)
 	}
 
-	log.Printf("recommendation: %s\n", recommendation)
+	log.Printf("%s\n", recommendation)
 }
