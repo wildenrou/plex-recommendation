@@ -47,7 +47,7 @@ func (v VideoShort) String() string {
 func fullToShort(vids []Video, limit int) []VideoShort {
 	shorts := make([]VideoShort, 0, limit)
 	for i, vid := range vids {
-		if i > limit {
+		if i >= limit {
 			break
 		}
 		shorts = append(shorts, VideoShort{Title: vid.Title, Summary: vid.Summary, ContentRating: vid.ContentRating})
