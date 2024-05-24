@@ -23,7 +23,7 @@ func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection 
 		return "", err
 	}
 
-	log.Println("generated\n")
+	log.Println("generated")
 	return recommendation, nil
 
 }
