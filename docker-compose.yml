@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  plex-recommendation: 
+    image: williamcook/plex-recommendation:$TAG_VERSION
+    build: 
+      context: .
+      dockerfile: ./build/docker/Dockerfile
+    restart: always 
+    env_file:
+      - path: ./.env
