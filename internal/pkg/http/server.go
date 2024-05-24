@@ -1,6 +1,7 @@
 package httpinternal
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/tmc/langchaingo/llms"
@@ -27,7 +28,8 @@ func StartServer(c *config.Config, shutdownChan chan error) {
 func initHttpServer(s chan error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /recommendation/{movieSection}", getRecommendation)
-	if err := http.ListenAndServe("localhost:8090", mux); err != nil {
+	log.Println("serving http...")
+	if err := http.ListenAndServe(":8090", mux); err != nil {
 		s <- err
 	}
 	s <- nil
@@ -36,6 +38,8 @@ func initHttpServer(s chan error) {
 // initPlex creates the Plex client the server uses to
 // connect to and execute queries against Plex
 func initPlex(c *config.Config) {
+	log.Println("initialzing plex client...")
+	defer log.Println("initialized")
 	if plexClient != nil {
 		return
 	}

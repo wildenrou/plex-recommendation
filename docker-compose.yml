@@ -9,3 +9,5 @@ services:
     restart: always 
     env_file:
       - path: ./.env
+    ports:
+      - "8090:8090"
