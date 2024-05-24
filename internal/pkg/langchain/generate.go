@@ -6,10 +6,9 @@ import (
 	"log"
 
 	"github.com/tmc/langchaingo/llms"
-	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 )
 
-func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection []plex.VideoShort, llm *llms.Model) (string, error) {
+func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection string, llm *llms.Model) (string, error) {
 	log.Println("generating recommendation...")
 	grounding := `Please recommend me up to five different movies to watch based on my recent watch
 	history provided here: %+v. Please do not suggest any titles that do not exist in the following 
@@ -24,7 +23,7 @@ func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection 
 		return "", err
 	}
 
-	log.Println("generated")
+	log.Println("generated\n")
 	return recommendation, nil
 
 }
