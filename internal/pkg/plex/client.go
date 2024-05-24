@@ -8,7 +8,7 @@ import (
 )
 
 type Client interface {
-	Connect(string) string
+	Connect(string, bool) string
 	MakeNetworkRequest(string, string) (*http.Response, error)
 }
 
@@ -28,13 +28,18 @@ func New(accesstoken, address string) *PlexClient {
 
 // Connect returns a string with our address and token
 // for the provided sectionId
-func (pc PlexClient) Connect(sectionID string) string {
+func (pc PlexClient) Connect(sectionID string, allMovies bool) string {
 	log.Println("generating connection string")
+	endpoint := "/all"
+	if !allMovies {
+		endpoint = "/recentlyViewed"
+	}
 	return "http://" +
 		pc.address +
 		":32400/library/sections/" +
 		sectionID +
-		"/recentlyViewed?X-Plex-Token=" +
+		endpoint +
+		"?X-Plex-Token=" +
 		pc.accessToken
 }
 
