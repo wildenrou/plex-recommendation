@@ -11,6 +11,10 @@ services:
       - path: ./.env
     ports:
       - "8090:8090"
+    depends_on: 
+      weaviate:
+        condition: service_healthy
+      
   weaviate:
     command:
     - --host
@@ -31,3 +35,10 @@ services:
       DEFAULT_VECTORIZER_MODULE: 'text2vec-ollama'
       ENABLE_MODULES: 'text2vec-ollama'
       CLUSTER_HOSTNAME: 'node1'
+    healthcheck:
+      test: ["CMD", "wget", "-nv", "--spider", "http://weaviate:8080/v1/.well-known/ready"]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+      start_interval: 5s
