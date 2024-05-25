@@ -9,11 +9,12 @@ import (
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/weaviate"
 )
 
 var (
-	plexClient *plex.PlexClient
-	ollamaLlm  llms.Model
+	plexClient     *plex.PlexClient
+	ollamaLlm      llms.Model
 	ollamaEmbedder embeddings.Embedder
 )
 
@@ -22,6 +23,7 @@ var (
 func StartServer(c *config.Config, shutdownChan chan error) {
 	initLLM(c)
 	initPlex(c)
+	initVectorStore()
 	initHttpServer(shutdownChan)
 }
 
@@ -49,7 +51,7 @@ func initPlex(c *config.Config) {
 }
 
 // initLLM creates the Ollama LLM client the server uses
-// to connect to and execute generation
+// to connect to and execute generation and embeddings
 func initLLM(c *config.Config) error {
 	if ollamaLlm != nil {
 		return nil
@@ -57,6 +59,15 @@ func initLLM(c *config.Config) error {
 	var err error
 	ollamaLlm, ollamaEmbedder, err = langchain.InitOllama(c.Ollama.Address, c.Ollama.Model)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// initVectorStore connects to Weaviate for storing
+// Plex data and related embeddings
+func initVectorStore() error {
+	if err := weaviate.InitWeaviate(); err != nil {
 		return err
 	}
 	return nil

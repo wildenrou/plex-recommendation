@@ -30,6 +30,10 @@ func InitWeaviate() error {
 		return err
 	}
 
+	if err := CreateSchemaIfNotExists(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
