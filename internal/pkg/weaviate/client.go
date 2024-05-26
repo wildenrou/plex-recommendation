@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/tmc/langchaingo/embeddings"
 	"github.com/weaviate/weaviate-go-client/v4/weaviate"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
@@ -14,7 +15,7 @@ import (
 
 var client *weaviate.Client
 
-func InitWeaviate() error {
+func InitWeaviate(c plex.Client, embedder embeddings.Embedder) error {
 	if client != nil {
 		return nil
 	}
@@ -30,7 +31,11 @@ func InitWeaviate() error {
 		return err
 	}
 
-	if err := CreateSchemaIfNotExists(); err != nil {
+	if err := createSchemaIfNotExists(); err != nil {
+		return err
+	}
+
+	if err := insertPlexMedia(c, embedder); err != nil {
 		return err
 	}
 
@@ -61,7 +66,6 @@ func InsertData(ctx context.Context, embedder embeddings.Embedder, videos []plex
 			},
 			Vector: vectors[i],
 		}
-
 		objs = append(objs, data)
 	}
 
@@ -92,7 +96,6 @@ func QueryData(ctx context.Context, limit int) ([]*models.Object, error) {
 
 	result, err := client.Data().ObjectsGetter().
 		WithClassName(videoCollectionName).
-		WithLimit(1).
 		WithVector().
 		Do(context.Background())
 	if err != nil {
@@ -100,4 +103,42 @@ func QueryData(ctx context.Context, limit int) ([]*models.Object, error) {
 	}
 
 	return result, nil
+}
+
+func insertPlexMedia(c plex.Client, embedder embeddings.Embedder) error {
+	log.Println("performing migration on load...")
+	vids, err := plex.GetAllVideos(c, "3")
+	if err != nil {
+		return err
+	}
+	log.Println("got ", len(vids), " videos")
+
+	savedData, err := QueryData(context.Background(), 500)
+	if err != nil {
+		return err
+	}
+
+	// map for faster lookup when we check if a video is
+	// already saved
+	savedHm := make(map[string]strfmt.UUID, len(savedData))
+	for _, obj := range savedData {
+		savedHm[obj.Properties.(plex.VideoShort).Summary] = obj.ID
+	}
+
+	toSave := make([]plex.VideoShort, 0, len(vids))
+	for _, vid := range vids {
+		if _, ok := savedHm[vid.Summary]; !ok {
+			// this video not found in the saved video
+			// map, so add it to the list of new media
+			// to save
+			toSave = append(toSave, vid)
+		}
+	}
+
+	log.Println("found ", len(toSave), " videos to save")
+	if err = InsertData(context.Background(), embedder, toSave); err != nil {
+		return err
+	}
+	log.Println("complete")
+	return nil
 }

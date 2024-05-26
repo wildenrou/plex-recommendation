@@ -21,9 +21,11 @@ var (
 // StartServer initializes dependent services that are
 // required to handle HTTP requests. This is blocking.
 func StartServer(c *config.Config, shutdownChan chan error) {
-	initLLM(c)
 	initPlex(c)
-	initVectorStore()
+	initLLM(c)
+	if err := initVectorStore(); err != nil {
+		panic("could not init vector store: " + err.Error())
+	}
 	initHttpServer(shutdownChan)
 }
 
@@ -65,9 +67,10 @@ func initLLM(c *config.Config) error {
 }
 
 // initVectorStore connects to Weaviate for storing
-// Plex data and related embeddings
+// Plex data and related embeddings and performs
+// any migrations required for startup.
 func initVectorStore() error {
-	if err := weaviate.InitWeaviate(); err != nil {
+	if err := weaviate.InitWeaviate(plexClient, ollamaEmbedder); err != nil {
 		return err
 	}
 	return nil

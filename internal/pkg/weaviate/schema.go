@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	videoCollectionName = "videos"
+	videoCollectionName = "Videos"
 )
 
 var VideoClass = models.Class{
@@ -18,13 +18,13 @@ var VideoClass = models.Class{
 	Properties: []*models.Property{
 		{
 			Name:        "title",
-			Description: "title of the provided data file",
+			Description: "title of the provided video",
 			DataType:    []string{"text"},
 		},
 		{
 			Name:        "summary",
-			Description: "string content of the data",
-			DataType:    []string{"text[]"},
+			Description: "description of the video's plot",
+			DataType:    []string{"text"},
 		},
 		{
 			Name:        "content_rating",
@@ -35,7 +35,7 @@ var VideoClass = models.Class{
 }
 
 func GetSchema() (*schema.Dump, error) {
-	if err := CreateSchemaIfNotExists(); err != nil {
+	if err := createSchemaIfNotExists(); err != nil {
 		return nil, err
 	}
 
@@ -47,7 +47,7 @@ func GetSchema() (*schema.Dump, error) {
 	return schema, nil
 }
 
-func CreateSchemaIfNotExists() error {
+func createSchemaIfNotExists() error {
 	ok, err := client.Schema().ClassExistenceChecker().WithClassName(videoCollectionName).Do(context.Background())
 	if err != nil {
 		log.Printf("could not check for class existence: %v\n", err)
