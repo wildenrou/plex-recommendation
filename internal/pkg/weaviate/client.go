@@ -93,16 +93,30 @@ func InsertData(ctx context.Context, embedder embeddings.Embedder, videos []plex
 }
 
 func QueryData(ctx context.Context, limit int) ([]*models.Object, error) {
+	allObjects := make([]*models.Object, 0)
+	after := ""
+	for {
+		getter := client.Data().ObjectsGetter().
+			WithClassName(videoCollectionName).
+			WithVector().
+			WithLimit(limit)
 
-	result, err := client.Data().ObjectsGetter().
-		WithClassName(videoCollectionName).
-		WithVector().
-		Do(context.Background())
-	if err != nil {
-		return nil, err
+		if after != "" {
+			getter = getter.WithAfter(after)
+		}
+
+		result, err := getter.Do(ctx)
+		if err != nil {
+			return nil, err
+		}
+		allObjects = append(allObjects, result...)
+		if len(result) <= limit {
+			break
+		}
+		after = result[len(result)-1].ID.String()
 	}
 
-	return result, nil
+	return allObjects, nil
 }
 
 func insertPlexMedia(c plex.Client, embedder embeddings.Embedder) error {
@@ -118,11 +132,14 @@ func insertPlexMedia(c plex.Client, embedder embeddings.Embedder) error {
 		return err
 	}
 
+	log.Println("found ", len(savedData), " videos in the db")
+
 	// map for faster lookup when we check if a video is
 	// already saved
 	savedHm := make(map[string]strfmt.UUID, len(savedData))
 	for _, obj := range savedData {
-		savedHm[obj.Properties.(plex.VideoShort).Summary] = obj.ID
+		summary := obj.Properties.(map[string]interface{})["summary"].(string)
+		savedHm[summary] = obj.ID
 	}
 
 	toSave := make([]plex.VideoShort, 0, len(vids))
@@ -136,9 +153,12 @@ func insertPlexMedia(c plex.Client, embedder embeddings.Embedder) error {
 	}
 
 	log.Println("found ", len(toSave), " videos to save")
-	if err = InsertData(context.Background(), embedder, toSave); err != nil {
-		return err
+	if len(toSave) > 0 {
+		if err = InsertData(context.Background(), embedder, toSave); err != nil {
+			return err
+		}
 	}
+
 	log.Println("complete")
 	return nil
 }
