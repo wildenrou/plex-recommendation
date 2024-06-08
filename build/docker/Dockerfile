@@ -12,6 +12,9 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Run tests
+RUN go test ./...
+
 # Build the Go binary statically 
 RUN CGO_ENABLED=0 GOOS=linux go build -o recommendations ./cmd/main.go
 
