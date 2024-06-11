@@ -2,12 +2,15 @@ package weaviate
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
 	"github.com/go-openapi/strfmt"
-	"github.com/tmc/langchaingo/embeddings"
+	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/weaviate/weaviate-go-client/v4/weaviate"
+	"github.com/weaviate/weaviate-go-client/v4/weaviate/graphql"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 
 	"github.com/weaviate/weaviate/entities/models"
@@ -15,7 +18,7 @@ import (
 
 var client *weaviate.Client
 
-func InitWeaviate(c plex.Client, embedder embeddings.Embedder) error {
+func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
 	if client != nil {
 		return nil
 	}
@@ -42,7 +45,7 @@ func InitWeaviate(c plex.Client, embedder embeddings.Embedder) error {
 	return nil
 }
 
-func InsertData(ctx context.Context, embedder embeddings.Embedder, videos []plex.VideoShort) error {
+func InsertData(ctx context.Context, embedder *ollama.LLM, videos []plex.VideoShort) error {
 	log.Println("inserting data")
 	defer log.Println("done!")
 
@@ -119,7 +122,7 @@ func QueryData(ctx context.Context, limit int) ([]*models.Object, error) {
 	return allObjects, nil
 }
 
-func insertPlexMedia(c plex.Client, embedder embeddings.Embedder) error {
+func insertPlexMedia(c plex.Client, embedder *ollama.LLM) error {
 	log.Println("performing migration on load...")
 	vids, err := plex.GetAllVideos(c, "3")
 	if err != nil {
@@ -161,4 +164,48 @@ func insertPlexMedia(c plex.Client, embedder embeddings.Embedder) error {
 
 	log.Println("complete")
 	return nil
+}
+
+func VectorQuery(ctx context.Context, limit int, vectors [][]float32) ([]*plex.VideoShort, error) {
+	nearVectorArgument := client.GraphQL().NearVectorArgBuilder()
+	for _, vector := range vectors {
+		nearVectorArgument.WithVector(vector)
+	}
+	fields := []graphql.Field{
+		{Name: "title"},
+		{Name: "summary"},
+		{Name: "content_rating"},
+	}
+	resp, err := client.GraphQL().Get().WithClassName(videoCollectionName).WithFields(fields...).WithNearVector(nearVectorArgument).WithLimit(limit).Do(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Errors != nil {
+		var errs string
+		for _, err := range resp.Errors {
+			errs += err.Message + "\n"
+		}
+
+		return nil, errors.New(errs)
+	}
+
+	results, err := resp.MarshalBinary()
+	if err != nil {
+		return nil, err
+	}
+
+	type marshalResults struct {
+		Data struct {
+			Get struct {
+				Videos []*plex.VideoShort `json:"Videos"`
+			} `json:"Get"`
+		} `json:"data"`
+	}
+
+	var toReturn marshalResults
+	if err := json.Unmarshal(results, &toReturn); err != nil {
+		return nil, err
+	}
+	return toReturn.Data.Get.Videos, nil
 }

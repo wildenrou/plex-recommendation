@@ -4,12 +4,12 @@ import (
 	"context"
 	"log"
 
-	"github.com/tmc/langchaingo/embeddings"
+	"github.com/tmc/langchaingo/llms/ollama"
 )
 
-func embedChunkedDocument(ctx context.Context, embedder embeddings.Embedder, texts []string) ([][]float32, error) {
+func embedChunkedDocument(ctx context.Context, embedder *ollama.LLM, texts []string) ([][]float32, error) {
 	log.Println("start embed chunked documents")
-	embeddings, err := embedder.EmbedDocuments(ctx, texts)
+	embeddings, err := embedder.CreateEmbedding(ctx, texts)
 	if err != nil {
 		return nil, err
 	}
