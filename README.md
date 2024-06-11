@@ -13,7 +13,7 @@ Provide both of these to the `PLEX_ADDRESS` and `PLEX_TOKEN` environment variabl
 
 ## Connecting to your LLM
 This recommendation engine connects to Ollama. You can bring your own or 
-run it on the cloud. Just provide `OLLAMA_ADDRESS` and `OLLAMA_MODEL` as 
+run it on the cloud. Just provide `OLLAMA_ADDRESS`, `OLLAMA_EMBEDDING_MODEL`, and `OLLAMA_LANGUAGE_MODEL` as 
 environment variables. 
 
 ### Grounding your LLM
