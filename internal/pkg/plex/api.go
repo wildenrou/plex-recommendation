@@ -35,13 +35,13 @@ type Video struct {
 }
 
 type VideoShort struct {
-	Title         string
-	Summary       string
-	ContentRating string
+	Title         string `json:"title"`
+	Summary       string `json:"summary"`
+	ContentRating string `json:"content_rating"`
 }
 
 func (v VideoShort) String() string {
-	return "Title: " + v.Title + "\nSummary: " + v.Summary + "\nRating: " + v.ContentRating
+	return "Title: " + v.Title + "\nSummary: " + v.Summary + "\nContent Rating: " + v.ContentRating
 }
 
 func fullToShort(vids []Video, limit int) []VideoShort {
