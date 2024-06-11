@@ -84,10 +84,18 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := response{
-		Response: recommendation,
+	normalized, err := langchain.NormalizeLLMResponse(r.Context(), recommendation, ollamaLlm)
+	if err != nil {
+		w.Write(formatHttpError(err))
+		return
 	}
-	respBytes, err := json.Marshal(&resp)
+
+	var respStruct []*plex.VideoShort
+	if err := json.Unmarshal([]byte(normalized), &respStruct); err != nil {
+		w.Write(formatHttpError(err))
+		return
+	}
+	respBytes, err := json.Marshal(&respStruct)
 	if err != nil {
 		w.Write(formatHttpError(err))
 		return
