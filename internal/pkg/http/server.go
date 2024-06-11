@@ -4,8 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/tmc/langchaingo/embeddings"
-	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
@@ -14,8 +13,8 @@ import (
 
 var (
 	plexClient     *plex.PlexClient
-	ollamaLlm      llms.Model
-	ollamaEmbedder embeddings.Embedder
+	ollamaLlm      *ollama.LLM
+	ollamaEmbedder *ollama.LLM
 )
 
 // StartServer initializes dependent services that are
@@ -59,7 +58,7 @@ func initLLM(c *config.Config) error {
 		return nil
 	}
 	var err error
-	ollamaLlm, ollamaEmbedder, err = langchain.InitOllama(c.Ollama.Address, c.Ollama.Model)
+	ollamaLlm, ollamaEmbedder, err = langchain.InitOllama(c.Ollama.Address, c.Ollama.LanguageModel, c.Ollama.EmbeddingModel)
 	if err != nil {
 		return err
 	}
