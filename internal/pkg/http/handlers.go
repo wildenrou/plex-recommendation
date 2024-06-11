@@ -11,6 +11,7 @@ import (
 
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/weaviate"
 )
 
 type response struct {
@@ -35,7 +36,30 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rvStr := buildStringFromSlice(recentlyViewed)
+	rvTexts := make([]string, 0, len(recentlyViewed))
+	for _, vid := range recentlyViewed {
+		rvTexts = append(rvTexts, vid.String())
+	}
+
+	log.Println("embeding recently viewed...")
+	log.Println("embedding ", len(rvTexts), " texts")
+	rvEmbeddings, err := ollamaEmbedder.CreateEmbedding(r.Context(), rvTexts)
+	if err != nil {
+		w.Write(formatHttpError(err))
+		return
+	}
+
+	log.Println("embeddings complete, querying database")
+
+	results, err := weaviate.VectorQuery(context.Background(), limit, rvEmbeddings)
+	if err != nil {
+		w.Write(formatHttpError(err))
+		return
+	}
+
+	log.Println("complete")
+
+	rvStr := buildStringFromSlice(results)
 
 	fullCollection, err := plex.GetAllVideos(plexClient, section)
 	if err != nil {
@@ -50,10 +74,10 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 	var recommendation string
 	if full {
 
-		recommendation, err = langchain.GenerateRecommendation(context.Background(), rvStr, fcStr, &ollamaLlm)
+		recommendation, err = langchain.GenerateRecommendation(context.Background(), rvStr, fcStr, ollamaLlm)
 
 	} else {
-		recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), &ollamaLlm)
+		recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), ollamaLlm)
 	}
 	if err != nil {
 		w.Write(formatHttpError(err))

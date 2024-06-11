@@ -14,8 +14,9 @@ type Config struct {
 		Address string
 	}
 	Ollama struct {
-		Address string
-		Model   string
+		Address        string
+		LanguageModel  string
+		EmbeddingModel string
 	}
 	RecentMovieCount int
 }
@@ -41,8 +42,11 @@ func LoadConfig() *Config {
 	if os.Getenv("OLLAMA_ADDRESS") != "" {
 		cfg.Ollama.Address = os.Getenv("OLLAMA_ADDRESS")
 	}
-	if os.Getenv("OLLAMA_MODEL") != "" {
-		cfg.Ollama.Model = os.Getenv("OLLAMA_MODEL")
+	if os.Getenv("OLLAMA_LANGUAGE_MODEL") != "" {
+		cfg.Ollama.LanguageModel = os.Getenv("OLLAMA_LANGUAGE_MODEL")
+	}
+	if os.Getenv("OLLAMA_EMBEDDING_MODEL") != "" {
+		cfg.Ollama.EmbeddingModel = os.Getenv("OLLAMA_EMBEDDING_MODEL")
 	}
 
 	recentMovieCountStr := os.Getenv("RECENT_MOVIE_COUNT")

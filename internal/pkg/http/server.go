@@ -4,22 +4,27 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/weaviate"
 )
 
 var (
-	plexClient *plex.PlexClient
-	ollamaLlm  llms.Model
+	plexClient     *plex.PlexClient
+	ollamaLlm      *ollama.LLM
+	ollamaEmbedder *ollama.LLM
 )
 
 // StartServer initializes dependent services that are
 // required to handle HTTP requests. This is blocking.
 func StartServer(c *config.Config, shutdownChan chan error) {
-	initLLM(c)
 	initPlex(c)
+	initLLM(c)
+	if err := initVectorStore(); err != nil {
+		panic("could not init vector store: " + err.Error())
+	}
 	initHttpServer(shutdownChan)
 }
 
@@ -47,14 +52,24 @@ func initPlex(c *config.Config) {
 }
 
 // initLLM creates the Ollama LLM client the server uses
-// to connect to and execute generation
+// to connect to and execute generation and embeddings
 func initLLM(c *config.Config) error {
 	if ollamaLlm != nil {
 		return nil
 	}
 	var err error
-	ollamaLlm, err = langchain.InitOllama(c.Ollama.Address, c.Ollama.Model)
+	ollamaLlm, ollamaEmbedder, err = langchain.InitOllama(c.Ollama.Address, c.Ollama.LanguageModel, c.Ollama.EmbeddingModel)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// initVectorStore connects to Weaviate for storing
+// Plex data and related embeddings and performs
+// any migrations required for startup.
+func initVectorStore() error {
+	if err := weaviate.InitWeaviate(plexClient, ollamaEmbedder); err != nil {
 		return err
 	}
 	return nil
