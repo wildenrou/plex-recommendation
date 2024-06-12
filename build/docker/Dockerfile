@@ -28,7 +28,6 @@ WORKDIR /app
 
 # Only copy the necessary binary and environment file
 COPY --from=builder /app/recommendations /app/recommendations
-COPY --from=builder /app/.env /app/.env
 
 # Change ownership to apprunner user
 RUN chown -R apprunner:apprunner /app
