@@ -24,11 +24,18 @@ that it may exceed the context window of the model you are using. You can
 adjust the amount of titles you retreive by adjusting the limits passed into
 the media getters in `internal/pkg/plex/api.go`. 
 
-## Building and running this App
+## Building and Running
+### Compiling from source
 Download this repository and build the app using 
 `go build -o recommendations ./cmd/main.go`. This builds a binary called
 `recommendations` that you can run with `./recommendations`. 
 
+### Docker Compose
+There is a `docker-compose.yml` file in the root of this repo. You can run
+the Recommendation Engine and the associated Weaviate database by issuing the
+`TAG_VERSION=foo docker compose up --build` command. Make sure you have 
+Docker and Docker Compose installed. 
+
 ### Testing this app
 There are several tests in the internal packages that were almost all written by 
-an LLM. You can test this program using `go test ./...` from the root of this repo.
+an LLM. You can test this program using `go test ./...` from the root of this repo. These tests are automatically run when you build with Docker.
