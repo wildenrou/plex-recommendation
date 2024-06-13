@@ -17,17 +17,17 @@ run it on the cloud. Just provide `OLLAMA_ADDRESS`, `OLLAMA_EMBEDDING_MODEL`, an
 environment variables. 
 
 ### Grounding your LLM
-You can find the RAG prompt in `internal/pkg/langchain/generate.go`. This is 
+You can find the RAG prompt in `backend/internal/pkg/langchain/generate.go`. This is 
 written to my specific needs. If your needs are not my needs, adjust the 
 grounding prompt accordingly. Note that if you have a very large media collection
 that it may exceed the context window of the model you are using. You can 
 adjust the amount of titles you retreive by adjusting the limits passed into
-the media getters in `internal/pkg/plex/api.go`. 
+the media getters in `backend/internal/pkg/plex/api.go`. 
 
 ## Building and Running
 ### Compiling from source
 Download this repository and build the app using 
-`go build -o recommendations ./cmd/main.go`. This builds a binary called
+`go build -o recommendations .backend/cmd/main.go`. This builds a binary called
 `recommendations` that you can run with `./recommendations`. 
 
 ### Docker Compose
