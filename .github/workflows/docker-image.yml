@@ -24,7 +24,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./build/docker/Dockerfile
+          context: backend
+          file: backend/build/docker/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/plex-recommendation:latest
