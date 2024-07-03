@@ -51,7 +51,7 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("embeddings complete, querying database")
 
-	results, err := weaviate.VectorQuery(context.Background(), limit, rvEmbeddings)
+	results, err := weaviate.VectorQuery(context.Background(), weaviate.VideoClass.Class, limit, rvEmbeddings)
 	if err != nil {
 		w.Write(formatHttpError(err))
 		return
