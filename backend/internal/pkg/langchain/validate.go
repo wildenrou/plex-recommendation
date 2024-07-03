@@ -8,6 +8,8 @@ import (
 	"github.com/tmc/langchaingo/llms/ollama"
 )
 
+// NormalizeLLMResponse provides the generated text from an LLM response and asks the LLM
+// to ensure it is restructured to valid JSON.
 func NormalizeLLMResponse(ctx context.Context, input string, llm *ollama.LLM) (string, error) {
 	grounding := `
 	Please pretty print the following into valid json. 
