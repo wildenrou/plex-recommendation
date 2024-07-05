@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/pg"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/weaviate"
 )
@@ -33,65 +34,78 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rvTexts := make([]string, 0, len(recentlyViewed))
+	titles := make([]string, 0, len(recentlyViewed))
 	for _, vid := range recentlyViewed {
 		rvTexts = append(rvTexts, vid.String())
+		titles = append(titles, vid.Title)
 	}
 
-	log.Println("embeding recently viewed...")
-	log.Println("embedding ", len(rvTexts), " texts")
-	rvEmbeddings, err := ollamaEmbedder.CreateEmbedding(r.Context(), rvTexts)
+	// query the cache to see if we've asked for recommendations
+	// based on this exact recently viewed
+	resp, err := pg.QueryData(pg.WithInputTitles(buildStringFromSlice(titles)))
 	if err != nil {
-		w.Write(formatHttpError(err))
-		return
+		log.Println("could not query cache for these titles: ", err.Error())
 	}
 
-	log.Println("embeddings complete, querying database")
+	var normalized string
 
-	results, err := weaviate.VectorQuery(context.Background(), weaviate.VideoClass.Class, limit, rvEmbeddings)
-	if err != nil {
-		w.Write(formatHttpError(err))
-		return
-	}
-
-	log.Println("complete")
-
-	rvStr := buildStringFromSlice(results)
-
-	fullCollection, err := plex.GetAllVideos(plexClient, section)
-	if err != nil {
-		w.Write(formatHttpError(err))
-		return
-	}
-
-	fcStr := buildStringFromSlice(fullCollection)
-
-	runSimple := os.Getenv("RUN_SIMPLE")
-	full := runSimple == ""
-	var recommendation string
-	if full {
-
-		recommendation, err = langchain.GenerateRecommendation(context.Background(), rvStr, fcStr, ollamaLlm)
-
+	// TODO: refactor if/else logic to functions
+	if resp.GeneratedOutput != "" {
+		normalized = resp.GeneratedOutput
+		log.Println("found cached recommendation")
 	} else {
-		recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), ollamaLlm)
-	}
-	if err != nil {
-		w.Write(formatHttpError(err))
-		return
-	}
+		log.Println("embeding recently viewed...")
+		log.Println("embedding ", len(rvTexts), " texts")
+		rvEmbeddings, err := ollamaEmbedder.CreateEmbedding(r.Context(), rvTexts)
+		if err != nil {
+			w.Write(formatHttpError(err))
+			return
+		}
 
-	// save this generated text back to the db
-	// if err := weaviate.InsertData(context.Background(), ollamaEmbedder,
-	// 	weaviate.WithGeneneratedContent(recommendation),
-	// 	weaviate.WithVideoInput(searchKey),
-	// ); err != nil {
-	// 	log.Println("could not cache result: ", err.Error())
-	// }
+		log.Println("embeddings complete, querying database")
 
-	normalized, err := langchain.NormalizeLLMResponse(r.Context(), recommendation, ollamaLlm)
-	if err != nil {
-		w.Write(formatHttpError(err))
-		return
+		results, err := weaviate.VectorQuery(context.Background(), weaviate.VideoClass.Class, limit, rvEmbeddings)
+		if err != nil {
+			w.Write(formatHttpError(err))
+			return
+		}
+
+		log.Println("complete")
+
+		rvStr := buildStringFromSlice(results)
+
+		fullCollection, err := plex.GetAllVideos(plexClient, section)
+		if err != nil {
+			w.Write(formatHttpError(err))
+			return
+		}
+
+		fcStr := buildStringFromSlice(fullCollection)
+
+		runSimple := os.Getenv("RUN_SIMPLE")
+		full := runSimple == ""
+		var recommendation string
+		if full {
+			recommendation, err = langchain.GenerateRecommendation(context.Background(), rvStr, fcStr, ollamaLlm)
+
+		} else {
+			recommendation, err = langchain.GenerateSimpleRecommendation(context.Background(), ollamaLlm)
+		}
+		if err != nil {
+			w.Write(formatHttpError(err))
+			return
+		}
+
+		normalized, err = langchain.NormalizeLLMResponse(r.Context(), recommendation, ollamaLlm)
+		if err != nil {
+			w.Write(formatHttpError(err))
+			return
+		}
+
+		// save this generated text back to the db
+		if err := pg.InsertData(buildStringFromSlice(titles), normalized); err != nil {
+			log.Println("could not cache this response: ", err.Error())
+		}
 	}
 
 	var respStruct []*plex.VideoShort

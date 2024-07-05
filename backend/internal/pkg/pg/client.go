@@ -1,31 +1,45 @@
 package pg
 
 import (
+	b64 "encoding/base64"
+	"log"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var db *gorm.DB
+var client *gorm.DB
 
 func InitPostgres() error {
+	if client != nil {
+		return nil
+	}
 	dsn := "host=postgres user=postgres password=postgres dbname=caches port=5432 sslmode=disable"
-	db, err := gorm.Open(postgres.Open(dsn))
+	var err error
+	client, err = gorm.Open(postgres.Open(dsn))
 	if err != nil {
 		return err
 	}
 
-	db.AutoMigrate(&RecommendationCache{})
+	log.Println("automigrating db")
+	if err := client.AutoMigrate(&RecommendationCache{}); err != nil {
+		return err
+	}
 
 	return nil
 }
 
+func toBase64(i string) string {
+	return b64.StdEncoding.EncodeToString([]byte(i))
+}
+
 func InsertData(input string, response string) error {
 	cache := &RecommendationCache{
-		InputTitles:     input,
+		InputTitles:     toBase64(input),
 		GeneratedOutput: response,
 	}
 
-	return db.Create(cache).Error
+	return client.Create(cache).Error
 }
 
 type queryOption struct {
@@ -37,7 +51,7 @@ type QueryOption func(*queryOption)
 
 func WithInputTitles(i string) QueryOption {
 	return func(q *queryOption) {
-		q.input = i
+		q.input = b64.StdEncoding.EncodeToString([]byte(i))
 	}
 }
 
@@ -53,7 +67,7 @@ func QueryData(opts ...QueryOption) (*RecommendationCache, error) {
 		opt(query)
 	}
 
-	var q RecommendationCache
+	var q = RecommendationCache{}
 	if query.input != "" {
 		q.InputTitles = query.input
 	}
@@ -61,8 +75,10 @@ func QueryData(opts ...QueryOption) (*RecommendationCache, error) {
 	if query.response != "" {
 		q.GeneratedOutput = query.response
 	}
-
-	var response *RecommendationCache
-	result := db.Where(&q).First(response)
-	return response, result.Error
+	var response = RecommendationCache{}
+	result := client.Where(&q).First(&response)
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, result.Error
+	}
+	return &response, nil
 }
