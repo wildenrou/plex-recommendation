@@ -35,23 +35,6 @@ var VideoClass = models.Class{
 	},
 }
 
-var CachedRecommendationClass = models.Class{
-	Class:       cachedCollectionName,
-	Description: "Schema for holding generated recommendations and the videos that generated them",
-	Properties: []*models.Property{
-		{
-			Name:        "video_input",
-			Description: "video_input is the latest watched videos provided as context to generate a recommendation",
-			DataType:    []string{"text"},
-		},
-		{
-			Name:        "generated_content",
-			Description: "generated_content is the previously generated recommendated based on the provided recently watched videos",
-			DataType:    []string{"text"},
-		},
-	},
-}
-
 func GetSchema() (*schema.Dump, error) {
 	if err := createSchemaIfNotExists(&VideoClass); err != nil {
 		return nil, err

@@ -14,10 +14,6 @@ import (
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/weaviate"
 )
 
-type response struct {
-	Response string `json:"response"`
-}
-
 func formatHttpError(err error) []byte {
 	return []byte(fmt.Sprintf(`{"error": "%s"}`, err.Error()))
 }
@@ -83,6 +79,14 @@ func getRecommendation(w http.ResponseWriter, r *http.Request) {
 		w.Write(formatHttpError(err))
 		return
 	}
+
+	// save this generated text back to the db
+	// if err := weaviate.InsertData(context.Background(), ollamaEmbedder,
+	// 	weaviate.WithGeneneratedContent(recommendation),
+	// 	weaviate.WithVideoInput(searchKey),
+	// ); err != nil {
+	// 	log.Println("could not cache result: ", err.Error())
+	// }
 
 	normalized, err := langchain.NormalizeLLMResponse(r.Context(), recommendation, ollamaLlm)
 	if err != nil {

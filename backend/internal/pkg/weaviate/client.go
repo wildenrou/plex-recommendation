@@ -18,6 +18,37 @@ import (
 
 var client *weaviate.Client
 
+type queryOption struct {
+	className string
+	limit     int
+}
+
+type QueryOption func(*queryOption)
+
+func WithClassName(s string) QueryOption {
+	return func(q *queryOption) {
+		q.className = s
+	}
+}
+
+func WithLimit(i int) QueryOption {
+	return func(q *queryOption) {
+		q.limit = i
+	}
+}
+
+type insertOption struct {
+	videos []plex.VideoShort
+}
+
+type InsertOption func(*insertOption)
+
+func WithVideos(v []plex.VideoShort) InsertOption {
+	return func(i *insertOption) {
+		i.videos = v
+	}
+}
+
 func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
 	if client != nil {
 		return nil
@@ -34,7 +65,7 @@ func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
 		return err
 	}
 
-	classesToCheck := []models.Class{VideoClass, CachedRecommendationClass}
+	classesToCheck := []models.Class{VideoClass}
 
 	for _, class := range classesToCheck {
 		if err := createSchemaIfNotExists(&class); err != nil {
@@ -49,31 +80,38 @@ func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
 	return nil
 }
 
-func InsertData(ctx context.Context, embedder *ollama.LLM, videos []plex.VideoShort) error {
+func InsertData(ctx context.Context, embedder *ollama.LLM, opts ...InsertOption) error {
 	log.Println("inserting data")
 	defer log.Println("done!")
 
-	var texts = make([]string, 0, len(videos))
-	for _, video := range videos {
-		texts = append(texts, video.String())
-	}
-	vectors, err := embedChunkedDocument(ctx, embedder, texts)
-	if err != nil {
-		return err
+	options := &insertOption{}
+	for _, opt := range opts {
+		opt(options)
 	}
 
-	var objs = make([]*models.Object, 0, len(videos))
-	for i, video := range videos {
-		data := &models.Object{
-			Class: videoCollectionName,
-			Properties: map[string]any{
-				"title":          video.Title,
-				"summary":        video.Summary,
-				"content_rating": video.ContentRating,
-			},
-			Vector: vectors[i],
+	var objs = make([]*models.Object, 0)
+	if options.videos != nil {
+		var texts = make([]string, 0, len(options.videos))
+		for _, video := range options.videos {
+			texts = append(texts, video.String())
 		}
-		objs = append(objs, data)
+		vectors, err := embedChunkedDocument(ctx, embedder, texts)
+		if err != nil {
+			return err
+		}
+
+		for i, video := range options.videos {
+			data := &models.Object{
+				Class: videoCollectionName,
+				Properties: map[string]any{
+					"title":          video.Title,
+					"summary":        video.Summary,
+					"content_rating": video.ContentRating,
+				},
+				Vector: vectors[i],
+			}
+			objs = append(objs, data)
+		}
 	}
 
 	log.Println("start batch insert")
@@ -99,14 +137,28 @@ func InsertData(ctx context.Context, embedder *ollama.LLM, videos []plex.VideoSh
 	return nil
 }
 
-func QueryData(ctx context.Context, collectionName string, limit int) ([]*models.Object, error) {
+func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, error) {
+	options := &queryOption{}
+	for _, opt := range opts {
+		opt(options)
+	}
+
+	limit := 5
+	if options.className == "" {
+		return nil, errors.New("no class provided to required WithClassName option")
+	}
+
+	if options.limit > 0 {
+		limit = options.limit
+	}
+
 	allObjects := make([]*models.Object, 0)
 	after := ""
 	for {
 		getter := client.Data().ObjectsGetter().
-			WithClassName(collectionName).
-			WithVector().
-			WithLimit(limit)
+			WithClassName(options.className).
+			WithLimit(limit).
+			WithVector()
 
 		if after != "" {
 			getter = getter.WithAfter(after)
@@ -134,7 +186,7 @@ func insertPlexMedia(c plex.Client, embedder *ollama.LLM) error {
 	}
 	log.Println("got ", len(vids), " videos")
 
-	savedData, err := QueryData(context.Background(), VideoClass.Class, 500)
+	savedData, err := QueryData(context.Background(), WithClassName(VideoClass.Class), WithLimit(500))
 	if err != nil {
 		return err
 	}
@@ -161,7 +213,7 @@ func insertPlexMedia(c plex.Client, embedder *ollama.LLM) error {
 
 	log.Println("found ", len(toSave), " videos to save")
 	if len(toSave) > 0 {
-		if err = InsertData(context.Background(), embedder, toSave); err != nil {
+		if err = InsertData(context.Background(), embedder, WithVideos(toSave)); err != nil {
 			return err
 		}
 	}
