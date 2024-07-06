@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	videoCollectionName = "Videos"
+	videoCollectionName  = "Videos"
+	cachedCollectionName = "RecommendationsCache"
 )
 
 var VideoClass = models.Class{
@@ -35,7 +36,7 @@ var VideoClass = models.Class{
 }
 
 func GetSchema() (*schema.Dump, error) {
-	if err := createSchemaIfNotExists(); err != nil {
+	if err := createSchemaIfNotExists(&VideoClass); err != nil {
 		return nil, err
 	}
 
@@ -47,8 +48,8 @@ func GetSchema() (*schema.Dump, error) {
 	return schema, nil
 }
 
-func createSchemaIfNotExists() error {
-	ok, err := client.Schema().ClassExistenceChecker().WithClassName(videoCollectionName).Do(context.Background())
+func createSchemaIfNotExists(class *models.Class) error {
+	ok, err := client.Schema().ClassExistenceChecker().WithClassName(class.Class).Do(context.Background())
 	if err != nil {
 		log.Printf("could not check for class existence: %v\n", err)
 	}
@@ -58,7 +59,7 @@ func createSchemaIfNotExists() error {
 		return nil
 	}
 	log.Println("class does not exist, creating")
-	creator := client.Schema().ClassCreator().WithClass(&VideoClass)
+	creator := client.Schema().ClassCreator().WithClass(class)
 	if err := creator.Do(context.Background()); err != nil {
 		return err
 	}

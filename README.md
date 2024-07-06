@@ -30,6 +30,13 @@ Download this repository and build the app using
 `go build -o recommendations .backend/cmd/main.go`. This builds a binary called
 `recommendations` that you can run with `./recommendations`. 
 
+### Cached Responses
+A Postgres database is attached at `./pg-data` and is used to cache recommendations. 
+The titles provided from recently viewed get base-64 encoded and stored along
+with the normalized recomendation provided by the LLM. This cache is looked up 
+before requesting LLM recommendation and is returned as is if one is found.
+
+
 ### Docker Compose
 There is a `docker-compose.yml` file in the root of this repo. You can run
 the Recommendation Engine and the associated Weaviate database by issuing the

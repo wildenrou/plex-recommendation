@@ -14,6 +14,8 @@ services:
     depends_on: 
       weaviate:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
       
   weaviate:
     command:
@@ -42,3 +44,17 @@ services:
       retries: 3
       start_period: 15s
       start_interval: 5s
+
+  postgres:
+    image: postgres
+    restart: always
+    env_file: .env
+    ports:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ${PWD}/pg-data/:/var/lib/postgresql/data/

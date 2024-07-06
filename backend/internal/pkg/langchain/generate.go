@@ -35,16 +35,3 @@ func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection 
 	return recommendation, nil
 
 }
-
-func GenerateSimpleRecommendation(ctx context.Context, llm *ollama.LLM) (string, error) {
-	log.Println("generating recommendation...")
-	grounding := "Hello! How are you today?"
-
-	recommendation, err := llms.GenerateFromSinglePrompt(ctx, llm, grounding)
-	if err != nil {
-		return "", err
-	}
-
-	log.Println("generated")
-	return recommendation, nil
-}

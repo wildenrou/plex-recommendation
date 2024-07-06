@@ -7,6 +7,7 @@ import (
 	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/langchain"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/pg"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/weaviate"
 )
@@ -25,6 +26,9 @@ func StartServer(c *config.Config, shutdownChan chan error) {
 	if err := initVectorStore(); err != nil {
 		panic("could not init vector store: " + err.Error())
 	}
+	if err := initCacheStore(); err != nil {
+		panic("could not init cache store: " + err.Error())
+	}
 	initHttpServer(shutdownChan)
 }
 
@@ -32,7 +36,7 @@ func StartServer(c *config.Config, shutdownChan chan error) {
 // and passes requests to their respective handler functions
 func initHttpServer(s chan error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /recommendation/{movieSection}", getRecommendation)
+	mux.HandleFunc("GET /recommendation/{movieSection}", recommendationHandler)
 	log.Println("serving http...")
 	if err := http.ListenAndServe(":8090", mux); err != nil {
 		s <- err
@@ -73,4 +77,11 @@ func initVectorStore() error {
 		return err
 	}
 	return nil
+}
+
+// initCacheStore connects to a database used for
+// storing responses from the LLM and the inputs
+// used to generate them.
+func initCacheStore() error {
+	return pg.InitPostgres()
 }
