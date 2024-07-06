@@ -21,8 +21,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 		return "", err
 	}
 
-
-	// LLM inputs operate on strings, so force the structs from the call to 
+	// LLM inputs operate on strings, so force the structs from the call to
 	// plex into their stringified forms
 	rvTexts := make([]string, 0, len(recentlyViewed))
 	titles := make([]string, 0, len(recentlyViewed))
@@ -79,7 +78,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 	}
 
 	// save this generated text back to the db
-	if err := pg.InsertData(buildStringFromSlice(titles), normalized); err != nil {
+	if err := pg.InsertData(titles, normalized); err != nil {
 		log.Println("could not cache this response: ", err.Error())
 	}
 

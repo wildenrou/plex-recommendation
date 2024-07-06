@@ -3,6 +3,7 @@ package pg
 import (
 	b64 "encoding/base64"
 	"log"
+	"slices"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,13 +30,12 @@ func InitPostgres() error {
 	return nil
 }
 
-func toBase64(i string) string {
-	return b64.StdEncoding.EncodeToString([]byte(i))
-}
-
-func InsertData(input string, response string) error {
+func InsertData(input []string, response string) error {
+	// sort the incoming titles slice so recently viewed is
+	// indifferent to order of recent viewing.
+	slices.Sort(input)
 	cache := &RecommendationCache{
-		InputTitles:     toBase64(input),
+		InputTitles:     toBase64(buildStringFromSlice(input)),
 		GeneratedOutput: response,
 	}
 
