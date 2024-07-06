@@ -36,7 +36,7 @@ func StartServer(c *config.Config, shutdownChan chan error) {
 // and passes requests to their respective handler functions
 func initHttpServer(s chan error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /recommendation/{movieSection}", getRecommendation)
+	mux.HandleFunc("GET /recommendation/{movieSection}", recommendationHandler)
 	log.Println("serving http...")
 	if err := http.ListenAndServe(":8090", mux); err != nil {
 		s <- err
