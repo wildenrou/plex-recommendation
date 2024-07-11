@@ -46,3 +46,10 @@ Docker and Docker Compose installed.
 ### Testing this app
 There are several tests in the internal packages that were almost all written by 
 an LLM. You can test this program using `go test ./...` from the root of this repo. These tests are automatically run when you build with Docker.
+
+### Open Telemetry 
+[Open Telemetry](https://opentelemetry.io/docs/what-is-opentelemetry/) tracing is instrumented in the backend. To use this out of the
+box, set `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=otlp://jaeger:4317` in the environment and ensure that the Jaeger service
+is started from Docker Compose. Traces are collected in Jaeger and accessible at `http://localhost:16686`. Metrics are 
+available to extend by passing the `telemetry.WithMeter` option `telemetry.InitOtel()`. You will have to instrument 
+metrics yourself. 
