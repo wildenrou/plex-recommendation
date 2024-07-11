@@ -1,6 +1,7 @@
 package httpinternal
 
 import (
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
 
@@ -36,9 +37,22 @@ func StartServer(c *config.Config, shutdownChan chan error) {
 // and passes requests to their respective handler functions
 func initHttpServer(s chan error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /recommendation/{movieSection}", recommendationHandler)
+
+	// handleFunc is a replacement for mux.HandleFunc
+	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
+	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+		// Configure the "http.route" for the HTTP instrumentation.
+		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
+		mux.Handle(pattern, handler)
+	}
+
+	// Register handlers.
+	handleFunc(recommendationPathway, recommendationHandler)
+
+	// Add HTTP instrumentation for the whole server.
+	handler := otelhttp.NewHandler(mux, "/")
 	log.Println("serving http...")
-	if err := http.ListenAndServe(":8090", mux); err != nil {
+	if err := http.ListenAndServe(":8090", handler); err != nil {
 		s <- err
 	}
 	s <- nil
