@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"log"
 
 	"github.com/go-openapi/strfmt"
@@ -49,8 +52,11 @@ func WithVideos(v []plex.VideoShort) InsertOption {
 	}
 }
 
-func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
+func InitWeaviate(ctx context.Context, c plex.Client, embedder *ollama.LLM) error {
+	ctx, span := telemetry.Tracer.Start(ctx, "InitWeaviate")
+	defer span.End()
 	if client != nil {
+		span.SetStatus(codes.Ok, "Connected to Weaviate Previously")
 		return nil
 	}
 
@@ -62,6 +68,7 @@ func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
 	var err error
 	client, err = weaviate.NewClient(cfg)
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 
@@ -69,14 +76,17 @@ func InitWeaviate(c plex.Client, embedder *ollama.LLM) error {
 
 	for _, class := range classesToCheck {
 		if err := createSchemaIfNotExists(&class); err != nil {
+			span.RecordError(err)
 			return err
 		}
 	}
 
-	if err := insertPlexMedia(c, embedder); err != nil {
+	if err := insertPlexMedia(ctx, c, embedder); err != nil {
+		span.RecordError(err)
 		return err
 	}
 
+	span.SetStatus(codes.Ok, "Connected to Weaviate")
 	return nil
 }
 
@@ -138,6 +148,10 @@ func InsertData(ctx context.Context, embedder *ollama.LLM, opts ...InsertOption)
 }
 
 func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, error) {
+	ctx, span := telemetry.Tracer.Start(ctx, "queryData")
+	defer span.End()
+	span.SetAttributes(attribute.String("package", "weaviate"))
+
 	options := &queryOption{}
 	for _, opt := range opts {
 		opt(options)
@@ -145,7 +159,9 @@ func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, erro
 
 	limit := 5
 	if options.className == "" {
-		return nil, errors.New("no class provided to required WithClassName option")
+		err := errors.New("no class provided to required WithClassName option")
+		span.RecordError(err)
+		return nil, err
 	}
 
 	if options.limit > 0 {
@@ -166,6 +182,7 @@ func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, erro
 
 		result, err := getter.Do(ctx)
 		if err != nil {
+			span.RecordError(err)
 			return nil, err
 		}
 		allObjects = append(allObjects, result...)
@@ -175,21 +192,27 @@ func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, erro
 		after = result[len(result)-1].ID.String()
 	}
 
+	span.SetStatus(codes.Ok, "query complete")
 	return allObjects, nil
 }
 
-func insertPlexMedia(c plex.Client, embedder *ollama.LLM) error {
+func insertPlexMedia(ctx context.Context, c plex.Client, embedder *ollama.LLM) error {
 	log.Println("performing migration on load...")
-	vids, err := plex.GetAllVideos(c, "3")
+	ctx, span := telemetry.Tracer.Start(ctx, "insertPlexMedia")
+	defer span.End()
+	vids, err := plex.GetAllVideos(ctx, c, "3")
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
 	log.Println("got ", len(vids), " videos")
-
-	savedData, err := QueryData(context.Background(), WithClassName(VideoClass.Class), WithLimit(500))
+	span.SetAttributes(attribute.Int("count", len(vids)))
+	savedData, err := QueryData(ctx, WithClassName(VideoClass.Class), WithLimit(500))
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
+	span.AddEvent("saved data")
 
 	log.Println("found ", len(savedData), " videos in the db")
 
@@ -213,16 +236,24 @@ func insertPlexMedia(c plex.Client, embedder *ollama.LLM) error {
 
 	log.Println("found ", len(toSave), " videos to save")
 	if len(toSave) > 0 {
-		if err = InsertData(context.Background(), embedder, WithVideos(toSave)); err != nil {
+		if err = InsertData(ctx, embedder, WithVideos(toSave)); err != nil {
+			span.RecordError(err)
 			return err
 		}
+
+		span.AddEvent("saved found diff data")
 	}
+
+	span.SetStatus(codes.Ok, "migration complete")
 
 	log.Println("complete")
 	return nil
 }
 
 func VectorQuery(ctx context.Context, collectionName string, limit int, vectors [][]float32) ([]*plex.VideoShort, error) {
+	ctx, span := telemetry.Tracer.Start(ctx, "VectorQuery")
+	defer span.End()
+	span.SetAttributes(attribute.String("package", "weaviate"))
 	nearVectorArgument := client.GraphQL().NearVectorArgBuilder()
 	for _, vector := range vectors {
 		nearVectorArgument.WithVector(vector)
@@ -234,22 +265,28 @@ func VectorQuery(ctx context.Context, collectionName string, limit int, vectors 
 	}
 	resp, err := client.GraphQL().Get().WithClassName(collectionName).WithFields(fields...).WithNearVector(nearVectorArgument).WithLimit(limit).Do(ctx)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
+
+	span.AddEvent("query successful")
 
 	if resp.Errors != nil {
 		var errs string
 		for _, err := range resp.Errors {
 			errs += err.Message + "\n"
 		}
-
+		span.RecordError(errors.New(errs))
 		return nil, errors.New(errs)
 	}
 
 	results, err := resp.MarshalBinary()
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
+
+	span.AddEvent("marshall binary successful")
 
 	type marshalResults struct {
 		Data struct {
@@ -261,7 +298,11 @@ func VectorQuery(ctx context.Context, collectionName string, limit int, vectors 
 
 	var toReturn marshalResults
 	if err := json.Unmarshal(results, &toReturn); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
+
+	span.SetStatus(codes.Ok, "query successful")
+
 	return toReturn.Data.Get.Videos, nil
 }

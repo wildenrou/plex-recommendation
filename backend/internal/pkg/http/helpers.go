@@ -20,7 +20,7 @@ func buildStringFromSlice[T any](slice []T) string {
 func getRecommendation(ctx context.Context, section string, limit int) (string, error) {
 	ctx, span := telemetry.Tracer.Start(ctx, "Get Recommendation")
 	defer span.End()
-	recentlyViewed, err := plex.GetRecentlyPlayed(plexClient, section, limit)
+	recentlyViewed, err := plex.GetRecentlyPlayed(ctx, plexClient, section, limit)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
@@ -37,7 +37,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 
 	// query the cache to see if we've asked for recommendations
 	// based on this exact recently viewed
-	resp, err := pg.QueryData(pg.WithInputTitles(buildStringFromSlice(titles)))
+	resp, err := pg.QueryData(ctx, pg.WithInputTitles(buildStringFromSlice(titles)))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		log.Println("could not query cache for these titles: ", err.Error())
@@ -62,17 +62,17 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 	span.AddEvent("embeddings complete")
 	log.Println("embeddings complete, querying database")
 
-	results, err := weaviate.VectorQuery(context.Background(), weaviate.VideoClass.Class, limit, rvEmbeddings)
+	results, err := weaviate.VectorQuery(ctx, weaviate.VideoClass.Class, limit, rvEmbeddings)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
 	}
-	span.AddEvent("vectory query complete")
+	span.AddEvent("vector query complete")
 	log.Println("complete")
 
 	rvStr := buildStringFromSlice(results)
 
-	fullCollection, err := plex.GetAllVideos(plexClient, section)
+	fullCollection, err := plex.GetAllVideos(ctx, plexClient, section)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
@@ -93,7 +93,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 	}
 	span.AddEvent("normalization complete")
 	// save this generated text back to the db
-	if err := pg.InsertData(titles, normalized); err != nil {
+	if err := pg.InsertData(ctx, titles, normalized); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		span.AddEvent("insert failed")
 		log.Println("could not cache this response: ", err.Error())

@@ -1,6 +1,7 @@
 package httpinternal
 
 import (
+	"context"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
@@ -21,10 +22,12 @@ var (
 
 // StartServer initializes dependent services that are
 // required to handle HTTP requests. This is blocking.
-func StartServer(c *config.Config, shutdownChan chan error) {
+func StartServer(ctx context.Context, c *config.Config, shutdownChan chan error) {
 	initPlex(c)
-	initLLM(c)
-	if err := initVectorStore(); err != nil {
+	if err := initLLM(c); err != nil {
+		panic("could not initialize llms: " + err.Error())
+	}
+	if err := initVectorStore(ctx); err != nil {
 		panic("could not init vector store: " + err.Error())
 	}
 	if err := initCacheStore(); err != nil {
@@ -86,8 +89,8 @@ func initLLM(c *config.Config) error {
 // initVectorStore connects to Weaviate for storing
 // Plex data and related embeddings and performs
 // any migrations required for startup.
-func initVectorStore() error {
-	if err := weaviate.InitWeaviate(plexClient, ollamaEmbedder); err != nil {
+func initVectorStore(ctx context.Context) error {
+	if err := weaviate.InitWeaviate(ctx, plexClient, ollamaEmbedder); err != nil {
 		return err
 	}
 	return nil

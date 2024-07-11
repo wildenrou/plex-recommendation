@@ -1,7 +1,11 @@
 package pg
 
 import (
+	"context"
 	b64 "encoding/base64"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"log"
 	"slices"
 
@@ -30,7 +34,10 @@ func InitPostgres() error {
 	return nil
 }
 
-func InsertData(input []string, response string) error {
+func InsertData(ctx context.Context, input []string, response string) error {
+	ctx, span := telemetry.Tracer.Start(ctx, "InsertData")
+	defer span.End()
+	span.SetAttributes(attribute.String("package", "pg"))
 	// sort the incoming titles slice so recently viewed is
 	// indifferent to order of recent viewing.
 	slices.Sort(input)
@@ -38,8 +45,13 @@ func InsertData(input []string, response string) error {
 		InputTitles:     toBase64(buildStringFromSlice(input)),
 		GeneratedOutput: response,
 	}
+	if err := client.Create(cache).Error; err != nil {
+		span.RecordError(err)
+		return err
+	}
 
-	return client.Create(cache).Error
+	span.SetStatus(codes.Ok, "insert complete")
+	return nil
 }
 
 type queryOption struct {
@@ -61,7 +73,11 @@ func WithReponse(r string) QueryOption {
 	}
 }
 
-func QueryData(opts ...QueryOption) (*RecommendationCache, error) {
+func QueryData(ctx context.Context, opts ...QueryOption) (*RecommendationCache, error) {
+	ctx, span := telemetry.Tracer.Start(ctx, "QueryData")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("package", "pg"))
 	var query = &queryOption{}
 	for _, opt := range opts {
 		opt(query)
@@ -78,7 +94,9 @@ func QueryData(opts ...QueryOption) (*RecommendationCache, error) {
 	var response = RecommendationCache{}
 	result := client.Where(&q).First(&response)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		span.RecordError(result.Error)
 		return nil, result.Error
 	}
+	span.SetStatus(codes.Ok, "query succeeded")
 	return &response, nil
 }

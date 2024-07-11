@@ -1,6 +1,7 @@
 package plex
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -92,7 +93,7 @@ func TestPlexClientMakeNetworkRequest(t *testing.T) {
 			}
 
 			// Make the request
-			resp, err := testClient.MakeNetworkRequest(tc.endpoint, tc.method)
+			resp, err := testClient.MakeNetworkRequest(context.Background(), tc.endpoint, tc.method)
 
 			// Assertions
 			if (err != nil) != tc.wantErr {

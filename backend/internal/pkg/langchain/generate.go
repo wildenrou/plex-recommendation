@@ -3,6 +3,9 @@ package langchain
 import (
 	"context"
 	"fmt"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"log"
 
 	"github.com/tmc/langchaingo/llms"
@@ -10,6 +13,9 @@ import (
 )
 
 func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection string, llm *ollama.LLM) (string, error) {
+	ctx, span := telemetry.Tracer.Start(ctx, "GenerateRecommendation")
+	defer span.End()
+	span.SetAttributes(attribute.String("package", "langchain"))
 	log.Println("generating recommendation...")
 	grounding := `Please recommend me up to 3 different movies to watch based on my recent watch
 	history provided here: %+v. Please do not suggest any titles that do not exist in the following 
@@ -28,8 +34,10 @@ func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection 
 
 	recommendation, err := llms.GenerateFromSinglePrompt(ctx, llm, fmt.Sprintf(grounding, recentlyViewed, fullCollection))
 	if err != nil {
+		span.RecordError(err)
 		return "", err
 	}
+	span.SetStatus(codes.Ok, "Generated recommendation")
 
 	log.Println("generated")
 	return recommendation, nil
