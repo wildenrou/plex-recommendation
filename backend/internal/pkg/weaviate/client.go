@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"log"
+	"strings"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/tmc/langchaingo/llms/ollama"
@@ -53,7 +54,7 @@ func WithVideos(v []plex.VideoShort) InsertOption {
 }
 
 func InitWeaviate(ctx context.Context, c plex.Client, embedder *ollama.LLM) error {
-	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("InitWeaviate"))
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Init Weaviate"), telemetry.WithSpanPackage("weaviate"))
 	defer span.End()
 	if client != nil {
 		span.SetStatus(codes.Ok, "Connected to Weaviate Previously")
@@ -93,7 +94,8 @@ func InitWeaviate(ctx context.Context, c plex.Client, embedder *ollama.LLM) erro
 func InsertData(ctx context.Context, embedder *ollama.LLM, opts ...InsertOption) error {
 	log.Println("inserting data")
 	defer log.Println("done!")
-
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Insert Data"), telemetry.WithSpanPackage("weaviate"))
+	defer span.End()
 	options := &insertOption{}
 	for _, opt := range opts {
 		opt(options)
@@ -107,6 +109,7 @@ func InsertData(ctx context.Context, embedder *ollama.LLM, opts ...InsertOption)
 		}
 		vectors, err := embedChunkedDocument(ctx, embedder, texts)
 		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 
@@ -126,24 +129,28 @@ func InsertData(ctx context.Context, embedder *ollama.LLM, opts ...InsertOption)
 
 	log.Println("start batch insert")
 	defer log.Println("batch done!")
+	span.AddEvent("start batching")
 	batchRes, err := client.Batch().ObjectsBatcher().WithObjects(objs...).Do(ctx)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
-
-	var errors []string
+	span.AddEvent("batch complete")
+	var errs []string
 	for _, res := range batchRes {
 		if res.Result.Errors != nil {
 			for _, err := range res.Result.Errors.Error {
-				errors = append(errors, fmt.Sprintf("%v, ", err.Message))
+				errs = append(errs, fmt.Sprintf("%v, ", err.Message))
 			}
 
 		}
 	}
 
-	if len(errors) != 0 {
-		return fmt.Errorf("error in insert: %v", errors)
+	if len(errs) != 0 {
+		span.RecordError(errors.New(strings.Join(errs, "\n")))
+		return fmt.Errorf("error in insert: %v", errs)
 	}
+	span.SetStatus(codes.Ok, "Inserted successfully")
 	return nil
 }
 
