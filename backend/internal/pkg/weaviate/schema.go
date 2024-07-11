@@ -2,9 +2,10 @@ package weaviate
 
 import (
 	"context"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
+	"go.opentelemetry.io/otel/codes"
 	"log"
 
-	"github.com/weaviate/weaviate-go-client/v4/weaviate/schema"
 	"github.com/weaviate/weaviate/entities/models"
 )
 
@@ -35,20 +36,9 @@ var VideoClass = models.Class{
 	},
 }
 
-func GetSchema() (*schema.Dump, error) {
-	if err := createSchemaIfNotExists(&VideoClass); err != nil {
-		return nil, err
-	}
-
-	schema, err := client.Schema().Getter().Do(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	return schema, nil
-}
-
-func createSchemaIfNotExists(class *models.Class) error {
+func createSchemaIfNotExists(ctx context.Context, class *models.Class) error {
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Create Schema If Not Exists"), telemetry.WithSpanPackage("weaviate"))
+	defer span.End()
 	ok, err := client.Schema().ClassExistenceChecker().WithClassName(class.Class).Do(context.Background())
 	if err != nil {
 		log.Printf("could not check for class existence: %v\n", err)
@@ -56,13 +46,16 @@ func createSchemaIfNotExists(class *models.Class) error {
 
 	if ok {
 		log.Println("class exists, exiting")
+		span.SetStatus(codes.Ok, "class exists")
 		return nil
 	}
 	log.Println("class does not exist, creating")
 	creator := client.Schema().ClassCreator().WithClass(class)
 	if err := creator.Do(context.Background()); err != nil {
+		span.RecordError(err)
 		return err
 	}
+	span.SetStatus(codes.Ok, "class created")
 	log.Println("created")
 
 	return nil

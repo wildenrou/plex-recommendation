@@ -76,7 +76,7 @@ func InitWeaviate(ctx context.Context, c plex.Client, embedder *ollama.LLM) erro
 	classesToCheck := []models.Class{VideoClass}
 
 	for _, class := range classesToCheck {
-		if err := createSchemaIfNotExists(&class); err != nil {
+		if err := createSchemaIfNotExists(ctx, &class); err != nil {
 			span.RecordError(err)
 			return err
 		}

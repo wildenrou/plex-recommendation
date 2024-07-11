@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -47,21 +48,28 @@ func newTraceProvider() (*trace.TracerProvider, error) {
 }
 
 type spanOption struct {
-	withName    string
-	withPackage string
+	name        string
+	packageName string
+	requestId   string
 }
 
 type SpanOption func(*spanOption)
 
 func WithSpanName(s string) SpanOption {
 	return func(o *spanOption) {
-		o.withName = s
+		o.name = s
 	}
 }
 
 func WithSpanPackage(s string) SpanOption {
 	return func(o *spanOption) {
-		o.withPackage = s
+		o.packageName = s
+	}
+}
+
+func WithRequestId(s string) SpanOption {
+	return func(o *spanOption) {
+		o.requestId = s
 	}
 }
 
@@ -71,15 +79,20 @@ func StartSpan(ctx context.Context, opts ...SpanOption) (context.Context, spanTr
 		o(opt)
 	}
 	spanName := "Span Name Unspecified"
-	if opt.withName != "" {
-		spanName = opt.withName
+	if opt.name != "" {
+		spanName = opt.name
 	}
 
 	packageName := "Unspecified"
-	if opt.withPackage != "" {
-		packageName = opt.withPackage
+	if opt.packageName != "" {
+		packageName = opt.packageName
+	}
+	requestId := uuid.NewString()
+	if opt.requestId != "" {
+		requestId = opt.requestId
 	}
 	ctx, span := tracer.Start(ctx, spanName)
 	span.SetAttributes(attribute.String("package", packageName))
+	span.SetAttributes(attribute.String("request_id", requestId))
 	return ctx, span
 }
