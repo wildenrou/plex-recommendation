@@ -10,11 +10,6 @@ import (
 
 const otelName = "Plex Recommendation API"
 
-var (
-	Tracer = otel.Tracer(otelName)
-	Meter  = otel.Meter(otelName)
-)
-
 // InitOtel bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
 func InitOtel(ctx context.Context, opts ...Option) (func(context.Context) error, error) {

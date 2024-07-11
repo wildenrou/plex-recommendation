@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -10,6 +11,8 @@ import (
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+var Tracer = otel.Tracer(otelName)
 
 func newPropagator() propagation.TextMapPropagator {
 	return propagation.NewCompositeTextMapPropagator(
