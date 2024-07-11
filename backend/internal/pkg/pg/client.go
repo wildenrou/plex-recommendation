@@ -15,22 +15,28 @@ import (
 
 var client *gorm.DB
 
-func InitPostgres() error {
+func InitPostgres(ctx context.Context) error {
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Init Postgres"), telemetry.WithSpanPackage("pg"))
+	defer span.End()
 	if client != nil {
+		span.SetStatus(codes.Ok, "Connected to Postgres Previously")
 		return nil
 	}
 	dsn := "host=postgres user=postgres password=postgres dbname=caches port=5432 sslmode=disable"
 	var err error
 	client, err = gorm.Open(postgres.Open(dsn))
 	if err != nil {
+		span.RecordError(err)
 		return err
 	}
-
+	span.AddEvent("Connected to Postgres")
 	log.Println("automigrating db")
 	if err := client.AutoMigrate(&RecommendationCache{}); err != nil {
+		span.RecordError(err)
 		return err
 	}
-
+	span.AddEvent("Migrated db")
+	span.SetStatus(codes.Ok, "Postgres Initialized")
 	return nil
 }
 

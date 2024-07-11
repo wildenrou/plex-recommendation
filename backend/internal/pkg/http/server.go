@@ -2,7 +2,9 @@ package httpinternal
 
 import (
 	"context"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/codes"
 	"log"
 	"net/http"
 
@@ -23,14 +25,16 @@ var (
 // StartServer initializes dependent services that are
 // required to handle HTTP requests. This is blocking.
 func StartServer(ctx context.Context, c *config.Config, shutdownChan chan error) {
-	initPlex(c)
-	if err := initLLM(c); err != nil {
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Start Server"), telemetry.WithSpanPackage("httpinternal"))
+	defer span.End()
+	initPlex(ctx, c)
+	if err := initLLM(ctx, c); err != nil {
 		panic("could not initialize llms: " + err.Error())
 	}
 	if err := initVectorStore(ctx); err != nil {
 		panic("could not init vector store: " + err.Error())
 	}
-	if err := initCacheStore(); err != nil {
+	if err := initCacheStore(ctx); err != nil {
 		panic("could not init cache store: " + err.Error())
 	}
 	initHttpServer(shutdownChan)
@@ -63,23 +67,27 @@ func initHttpServer(s chan error) {
 
 // initPlex creates the Plex client the server uses to
 // connect to and execute queries against Plex
-func initPlex(c *config.Config) {
+func initPlex(ctx context.Context, c *config.Config) {
 	log.Println("initialzing plex client...")
 	defer log.Println("initialized")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Init Plex"))
+	defer span.End()
 	if plexClient != nil {
+		span.SetStatus(codes.Ok, "Plex client initialized previously")
 		return
 	}
 	plexClient = plex.New(c.Plex.Token, c.Plex.Address)
+	span.SetStatus(codes.Ok, "Plex client initialized")
 }
 
 // initLLM creates the Ollama LLM client the server uses
 // to connect to and execute generation and embeddings
-func initLLM(c *config.Config) error {
+func initLLM(ctx context.Context, c *config.Config) error {
 	if ollamaLlm != nil {
 		return nil
 	}
 	var err error
-	ollamaLlm, ollamaEmbedder, err = langchain.InitOllama(c.Ollama.Address, c.Ollama.LanguageModel, c.Ollama.EmbeddingModel)
+	ollamaLlm, ollamaEmbedder, err = langchain.InitOllama(ctx, c.Ollama.Address, c.Ollama.LanguageModel, c.Ollama.EmbeddingModel)
 	if err != nil {
 		return err
 	}
@@ -99,6 +107,6 @@ func initVectorStore(ctx context.Context) error {
 // initCacheStore connects to a database used for
 // storing responses from the LLM and the inputs
 // used to generate them.
-func initCacheStore() error {
-	return pg.InitPostgres()
+func initCacheStore(ctx context.Context) error {
+	return pg.InitPostgres(ctx)
 }
