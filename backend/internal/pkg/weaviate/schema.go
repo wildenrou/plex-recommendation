@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/weaviate/weaviate-go-client/v4/weaviate/schema"
 	"github.com/weaviate/weaviate/entities/models"
 )
 
@@ -33,19 +32,6 @@ var VideoClass = models.Class{
 			DataType:    []string{"text"},
 		},
 	},
-}
-
-func GetSchema() (*schema.Dump, error) {
-	if err := createSchemaIfNotExists(&VideoClass); err != nil {
-		return nil, err
-	}
-
-	schema, err := client.Schema().Getter().Do(context.Background())
-	if err != nil {
-		return nil, err
-	}
-
-	return schema, nil
 }
 
 func createSchemaIfNotExists(class *models.Class) error {
