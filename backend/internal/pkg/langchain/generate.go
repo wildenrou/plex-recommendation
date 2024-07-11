@@ -13,7 +13,7 @@ import (
 )
 
 func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection string, llm *ollama.LLM) (string, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "GenerateRecommendation")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("GenerateRecommendation"))
 	defer span.End()
 	span.SetAttributes(attribute.String("package", "langchain"))
 	log.Println("generating recommendation...")

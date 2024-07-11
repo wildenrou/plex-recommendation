@@ -51,7 +51,7 @@ func (pc PlexClient) Connect(sectionID string, allMovies bool) string {
 // MakeNetworkRequest makes an HTTP request with the provided method
 // to the provided endpoint
 func (pc PlexClient) MakeNetworkRequest(ctx context.Context, endpoint, method string) (*http.Response, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "MakeNetworkRequest")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("MakeNetworkRequest"))
 	defer span.End()
 	span.SetAttributes(attribute.String("endpoint", endpoint))
 	span.SetAttributes(attribute.String("method", method))

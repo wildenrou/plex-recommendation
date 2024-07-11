@@ -13,7 +13,7 @@ import (
 // NormalizeLLMResponse provides the generated text from an LLM response and asks the LLM
 // to ensure it is restructured to valid JSON.
 func NormalizeLLMResponse(ctx context.Context, input string, llm *ollama.LLM) (string, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "normalizeLLMResponse")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Normalize LLM Response"))
 	defer span.End()
 	grounding := `
 	Please pretty print the following into valid json. 

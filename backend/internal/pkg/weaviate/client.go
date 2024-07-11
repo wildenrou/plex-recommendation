@@ -53,7 +53,7 @@ func WithVideos(v []plex.VideoShort) InsertOption {
 }
 
 func InitWeaviate(ctx context.Context, c plex.Client, embedder *ollama.LLM) error {
-	ctx, span := telemetry.Tracer.Start(ctx, "InitWeaviate")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("InitWeaviate"))
 	defer span.End()
 	if client != nil {
 		span.SetStatus(codes.Ok, "Connected to Weaviate Previously")
@@ -148,7 +148,7 @@ func InsertData(ctx context.Context, embedder *ollama.LLM, opts ...InsertOption)
 }
 
 func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "queryData")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Query Data"))
 	defer span.End()
 	span.SetAttributes(attribute.String("package", "weaviate"))
 
@@ -198,7 +198,7 @@ func QueryData(ctx context.Context, opts ...QueryOption) ([]*models.Object, erro
 
 func insertPlexMedia(ctx context.Context, c plex.Client, embedder *ollama.LLM) error {
 	log.Println("performing migration on load...")
-	ctx, span := telemetry.Tracer.Start(ctx, "insertPlexMedia")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Insert Plex Media"))
 	defer span.End()
 	vids, err := plex.GetAllVideos(ctx, c, "3")
 	if err != nil {
@@ -251,7 +251,7 @@ func insertPlexMedia(ctx context.Context, c plex.Client, embedder *ollama.LLM) e
 }
 
 func VectorQuery(ctx context.Context, collectionName string, limit int, vectors [][]float32) ([]*plex.VideoShort, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "VectorQuery")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Vector Query"))
 	defer span.End()
 	span.SetAttributes(attribute.String("package", "weaviate"))
 	nearVectorArgument := client.GraphQL().NearVectorArgBuilder()

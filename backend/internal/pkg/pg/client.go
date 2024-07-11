@@ -35,7 +35,7 @@ func InitPostgres() error {
 }
 
 func InsertData(ctx context.Context, input []string, response string) error {
-	ctx, span := telemetry.Tracer.Start(ctx, "InsertData")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("InsertData"))
 	defer span.End()
 	span.SetAttributes(attribute.String("package", "pg"))
 	// sort the incoming titles slice so recently viewed is
@@ -74,7 +74,7 @@ func WithReponse(r string) QueryOption {
 }
 
 func QueryData(ctx context.Context, opts ...QueryOption) (*RecommendationCache, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "QueryData")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("QueryData"))
 	defer span.End()
 
 	span.SetAttributes(attribute.String("package", "pg"))

@@ -20,7 +20,11 @@ func formatHttpError(err error) []byte {
 const recommendationPathway = "/recommendation/{movieSection}"
 
 func recommendationHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, span := telemetry.Tracer.Start(r.Context(), "Get Recommendation HTTP Handler")
+
+	ctx, span := telemetry.StartSpan(r.Context(),
+		telemetry.WithSpanName("Get Recommendation HTTP Handler"),
+		telemetry.WithSpanPackage("httpinternal"),
+	)
 	defer span.End()
 	section := r.PathValue("movieSection")
 	span.SetAttributes(attribute.String("movieSection", section))

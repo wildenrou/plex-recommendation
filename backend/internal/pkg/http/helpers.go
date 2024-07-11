@@ -18,7 +18,7 @@ func buildStringFromSlice[T any](slice []T) string {
 }
 
 func getRecommendation(ctx context.Context, section string, limit int) (string, error) {
-	ctx, span := telemetry.Tracer.Start(ctx, "Get Recommendation")
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Get Recommendation"))
 	defer span.End()
 	recentlyViewed, err := plex.GetRecentlyPlayed(ctx, plexClient, section, limit)
 	if err != nil {
