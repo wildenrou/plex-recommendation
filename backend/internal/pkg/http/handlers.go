@@ -3,6 +3,7 @@ package httpinternal
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -20,9 +21,14 @@ func formatHttpError(err error) []byte {
 const recommendationPathway = "/recommendation/{movieSection}"
 
 func recommendationHandler(w http.ResponseWriter, r *http.Request) {
+	requestId := r.Header.Get("X-Request-Id")
+	if requestId == "" {
+		requestId = uuid.NewString()
+	}
 	ctx, span := telemetry.StartSpan(r.Context(),
 		telemetry.WithSpanName("Get Recommendation HTTP Handler"),
 		telemetry.WithSpanPackage("httpinternal"),
+		telemetry.WithRequestId(requestId),
 	)
 	defer span.End()
 	section := r.PathValue("movieSection")
