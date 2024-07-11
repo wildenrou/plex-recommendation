@@ -1,6 +1,8 @@
 package httpinternal
 
 import (
+	"context"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
 
@@ -20,10 +22,12 @@ var (
 
 // StartServer initializes dependent services that are
 // required to handle HTTP requests. This is blocking.
-func StartServer(c *config.Config, shutdownChan chan error) {
+func StartServer(ctx context.Context, c *config.Config, shutdownChan chan error) {
 	initPlex(c)
-	initLLM(c)
-	if err := initVectorStore(); err != nil {
+	if err := initLLM(c); err != nil {
+		panic("could not initialize llms: " + err.Error())
+	}
+	if err := initVectorStore(ctx); err != nil {
 		panic("could not init vector store: " + err.Error())
 	}
 	if err := initCacheStore(); err != nil {
@@ -36,9 +40,22 @@ func StartServer(c *config.Config, shutdownChan chan error) {
 // and passes requests to their respective handler functions
 func initHttpServer(s chan error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /recommendation/{movieSection}", recommendationHandler)
+
+	// handleFunc is a replacement for mux.HandleFunc
+	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
+	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
+		// Configure the "http.route" for the HTTP instrumentation.
+		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
+		mux.Handle(pattern, handler)
+	}
+
+	// Register handlers.
+	handleFunc(recommendationPathway, recommendationHandler)
+
+	// Add HTTP instrumentation for the whole server.
+	handler := otelhttp.NewHandler(mux, "/")
 	log.Println("serving http...")
-	if err := http.ListenAndServe(":8090", mux); err != nil {
+	if err := http.ListenAndServe(":8090", handler); err != nil {
 		s <- err
 	}
 	s <- nil
@@ -72,8 +89,8 @@ func initLLM(c *config.Config) error {
 // initVectorStore connects to Weaviate for storing
 // Plex data and related embeddings and performs
 // any migrations required for startup.
-func initVectorStore() error {
-	if err := weaviate.InitWeaviate(plexClient, ollamaEmbedder); err != nil {
+func initVectorStore(ctx context.Context) error {
+	if err := weaviate.InitWeaviate(ctx, plexClient, ollamaEmbedder); err != nil {
 		return err
 	}
 	return nil

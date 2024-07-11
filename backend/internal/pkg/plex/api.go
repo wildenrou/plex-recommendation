@@ -1,7 +1,11 @@
 package plex
 
 import (
+	"context"
 	"encoding/xml"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"io"
 	"log"
 	"net/http"
@@ -56,61 +60,76 @@ func fullToShort(vids []Video, limit int) []VideoShort {
 	return shorts
 }
 
-func GetRecentlyPlayed(c Client, sectionId string, limit int) ([]VideoShort, error) {
+func GetRecentlyPlayed(ctx context.Context, c Client, sectionId string, limit int) ([]VideoShort, error) {
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("GetRecentlyPlayed"))
+	defer span.End()
 	log.Println("connecting to Plex...")
 	connectionUri := c.Connect(sectionId, !allMovies)
 	log.Println("connected")
+	span.AddEvent("connected to Plex")
 
 	log.Println("getting recently watched...")
-	resp, err := c.MakeNetworkRequest(connectionUri, http.MethodGet)
+	resp, err := c.MakeNetworkRequest(ctx, connectionUri, http.MethodGet)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	log.Println("received")
+	span.AddEvent("Received recently watched")
 
 	var container MediaContainer
 	if err := xml.Unmarshal(bodyBytes, &container); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	log.Printf("total count: %v\n", len(container.Videos))
-
+	span.SetAttributes(attribute.Int("total count", len(container.Videos)))
 	shorts := fullToShort(container.Videos, limit)
 	log.Printf("returning %v recently watched\n", limit)
-
+	span.SetStatus(codes.Ok, "recently watched complete")
 	return shorts, nil
 }
 
-func GetAllVideos(c Client, sectionId string) ([]VideoShort, error) {
+func GetAllVideos(ctx context.Context, c Client, sectionId string) ([]VideoShort, error) {
+	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("GetAllVideos"))
+	defer span.End()
+
+	span.SetAttributes(attribute.String("package", "plex"))
 	log.Println("connecting to Plex...")
 	connectionUri := c.Connect(sectionId, allMovies)
 	log.Println("connected")
+	span.AddEvent("connected to plex")
 
 	log.Println("getting recently watched...")
-	resp, err := c.MakeNetworkRequest(connectionUri, http.MethodGet)
+	resp, err := c.MakeNetworkRequest(ctx, connectionUri, http.MethodGet)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	log.Println("received")
 
 	var container MediaContainer
 	if err := xml.Unmarshal(bodyBytes, &container); err != nil {
+		span.RecordError(err)
 		return nil, err
 	}
 	log.Printf("total count: %v\n", len(container.Videos))
 	shorts := fullToShort(container.Videos, len(container.Videos))
 	log.Println("returning all movies")
-
+	span.SetStatus(codes.Ok, "all movies complete")
 	return shorts, nil
 }
