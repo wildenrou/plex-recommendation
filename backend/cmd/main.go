@@ -16,15 +16,19 @@ func main() {
 	log.Println("Hello!")
 	defer log.Println("Good bye!")
 
+	ctx := context.Background()
+
 	// Set up open telemetry
 	log.Println("initializing open telemetry client...")
-	shutdownOtel, err := telemetry.InitOtel(context.Background(), telemetry.WithTracer(true))
+	shutdownOtel, err := telemetry.InitOtel(ctx,
+		telemetry.WithTracer(true),
+		telemetry.WithMeter(false))
 	if err != nil {
 		panic(err)
 	}
 	log.Println("done!")
 	defer func() {
-		if err := shutdownOtel(context.Background()); err != nil {
+		if err := shutdownOtel(ctx); err != nil {
 			log.Println("could not shutdown otel:" + err.Error())
 		}
 	}()
@@ -33,7 +37,7 @@ func main() {
 	serverDone := make(chan error, 1)
 	go func() {
 		log.Println("Starting server...")
-		httpinternal.StartServer(config.LoadConfig(), serverDone)
+		httpinternal.StartServer(ctx, config.LoadConfig(), serverDone)
 	}()
 
 	// Set up signal handling
