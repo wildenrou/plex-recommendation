@@ -269,6 +269,7 @@ func VectorQuery(ctx context.Context, collectionName string, limit int, vectors 
 		{Name: "title"},
 		{Name: "summary"},
 		{Name: "content_rating"},
+		{Name: "plex_id"},
 	}
 	resp, err := client.GraphQL().Get().WithClassName(collectionName).WithFields(fields...).WithNearVector(nearVectorArgument).WithLimit(limit).Do(ctx)
 	if err != nil {

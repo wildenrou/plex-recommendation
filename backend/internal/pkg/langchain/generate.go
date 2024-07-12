@@ -26,7 +26,8 @@ func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection 
 	{
 		"title": title,
 		"summary": summary,
-		"content_rating": content_rating
+		"content_rating": content_rating,
+		"plex_id": plex_id,
 	}
 	Please do not recommend more than 3 titles. Please do ensure your response is valid json before
 	returning it to me. If a content rating is not found, generate a rating of "NR" for not rated.

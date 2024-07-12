@@ -42,10 +42,14 @@ type VideoShort struct {
 	Title         string `json:"title"`
 	Summary       string `json:"summary"`
 	ContentRating string `json:"content_rating"`
+	PlexID        string `json:"plex_id"`
 }
 
 func (v VideoShort) String() string {
-	return "Title: " + v.Title + "\nSummary: " + v.Summary + "\nContent Rating: " + v.ContentRating
+	return "Title: " + v.Title +
+		"\nSummary: " + v.Summary +
+		"\nContent Rating: " + v.ContentRating +
+		"\nPlex ID: " + v.PlexID
 }
 
 func fullToShort(vids []Video, limit int) []VideoShort {
@@ -54,7 +58,12 @@ func fullToShort(vids []Video, limit int) []VideoShort {
 		if i >= limit {
 			break
 		}
-		shorts = append(shorts, VideoShort{Title: vid.Title, Summary: vid.Summary, ContentRating: vid.ContentRating})
+		shorts = append(shorts, VideoShort{
+			Title:         vid.Title,
+			Summary:       vid.Summary,
+			ContentRating: vid.ContentRating,
+			PlexID:        vid.Guid,
+		})
 	}
 
 	return shorts
