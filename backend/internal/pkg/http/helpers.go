@@ -52,7 +52,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 
 	span.AddEvent("no cached recommendation")
 
-	log.Println("embeding recently viewed...")
+	log.Println("embedding recently viewed...")
 	log.Println("embedding ", len(rvTexts), " texts")
 	rvEmbeddings, err := ollamaEmbedder.CreateEmbedding(ctx, rvTexts)
 	if err != nil {
