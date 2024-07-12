@@ -2,7 +2,6 @@ package pg
 
 import (
 	"context"
-	b64 "encoding/base64"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -67,13 +66,14 @@ type queryOption struct {
 
 type QueryOption func(*queryOption)
 
-func WithInputTitles(i string) QueryOption {
+func WithInputTitles(i []string) QueryOption {
 	return func(q *queryOption) {
-		q.input = b64.StdEncoding.EncodeToString([]byte(i))
+		slices.Sort(i)
+		q.input = toBase64(buildStringFromSlice(i))
 	}
 }
 
-func WithReponse(r string) QueryOption {
+func WithResponse(r string) QueryOption {
 	return func(q *queryOption) {
 		q.response = r
 	}
