@@ -116,7 +116,7 @@ func GetAllVideos(ctx context.Context, c Client, sectionId string) ([]VideoShort
 	log.Println("connected")
 	span.AddEvent("connected to plex")
 
-	log.Println("getting recently watched...")
+	log.Println("getting all videos...")
 	resp, err := c.MakeNetworkRequest(ctx, connectionUri, http.MethodGet)
 	if err != nil {
 		span.RecordError(err)
