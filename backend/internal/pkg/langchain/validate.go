@@ -22,6 +22,7 @@ func NormalizeLLMResponse(ctx context.Context, input string, llm *ollama.LLM) (s
 	Please remove any you find in the provided text: 
 	
 	%s
+	so that the output is only a valid json object and nothing else.
 	`
 
 	recommendation, err := llms.GenerateFromSinglePrompt(ctx, llm, fmt.Sprintf(grounding, input))

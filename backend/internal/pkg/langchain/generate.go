@@ -31,6 +31,22 @@ func GenerateRecommendation(ctx context.Context, recentlyViewed, fullCollection 
 	}
 	Please do not recommend more than 3 titles. Please do ensure your response is valid json before
 	returning it to me. If a content rating is not found, generate a rating of "NR" for not rated.
+
+	Finally, return a justification for why you recommended these titles. This justification should be outside of the
+	array of titles, and be on the "justification" member of the response json. Your final output should take this 
+	shape: 
+	{ 
+		"videos": [
+			{
+				"title": title,
+				"summary": summary,
+				"content_rating": content_rating,
+				"plex_id": plex_id,
+			}
+		], 
+		"justification": "I recommend watching these videos based on your recent watch history because..."
+	}
+	with the "justification" being the actual reason why you recommended those videos based on my recent watch history.
 	`
 
 	recommendation, err := llms.GenerateFromSinglePrompt(ctx, llm, fmt.Sprintf(grounding, recentlyViewed, fullCollection))
