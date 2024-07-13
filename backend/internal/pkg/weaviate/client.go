@@ -257,7 +257,7 @@ func insertPlexMedia(ctx context.Context, c plex.Client, embedder *ollama.LLM) e
 	return nil
 }
 
-func VectorQuery(ctx context.Context, collectionName string, limit int, vectors [][]float32) ([]*plex.VideoShort, error) {
+func VectorQuery(ctx context.Context, collectionName string, vectors [][]float32) ([]*plex.VideoShort, error) {
 	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Vector Query"))
 	defer span.End()
 	span.SetAttributes(attribute.String("package", "weaviate"))
@@ -269,8 +269,9 @@ func VectorQuery(ctx context.Context, collectionName string, limit int, vectors 
 		{Name: "title"},
 		{Name: "summary"},
 		{Name: "content_rating"},
+		{Name: "plex_id"},
 	}
-	resp, err := client.GraphQL().Get().WithClassName(collectionName).WithFields(fields...).WithNearVector(nearVectorArgument).WithLimit(limit).Do(ctx)
+	resp, err := client.GraphQL().Get().WithClassName(collectionName).WithFields(fields...).WithNearVector(nearVectorArgument).Do(ctx)
 	if err != nil {
 		span.RecordError(err)
 		return nil, err

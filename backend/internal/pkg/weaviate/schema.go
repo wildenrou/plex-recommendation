@@ -33,6 +33,11 @@ var VideoClass = models.Class{
 			Description: "motion picture film association content rating",
 			DataType:    []string{"text"},
 		},
+		{
+			Name:        "plex_id",
+			Description: "Plex GUID associated to the video",
+			DataType:    []string{"text"},
+		},
 	},
 }
 

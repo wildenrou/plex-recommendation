@@ -6,7 +6,13 @@ import (
 )
 
 func TestQueryOptions(t *testing.T) {
-	// Written entirely with Gemini
+	// Written mostly with Gemini
+	var (
+		testTitles    = []string{"test", "title"}
+		anotherTitle  = []string{"another", "title"}
+		stringTitles  = buildStringFromSlice(testTitles)
+		anotherString = buildStringFromSlice(anotherTitle)
+	)
 	tests := []struct {
 		name     string
 		options  []QueryOption
@@ -19,18 +25,18 @@ func TestQueryOptions(t *testing.T) {
 		},
 		{
 			name:     "With Input Title",
-			options:  []QueryOption{WithInputTitles("test title")},
-			expected: queryOption{response: "", input: base64.StdEncoding.EncodeToString([]byte("test title"))},
+			options:  []QueryOption{WithInputTitles(testTitles)},
+			expected: queryOption{response: "", input: base64.StdEncoding.EncodeToString([]byte(stringTitles))},
 		},
 		{
 			name:     "With Response",
-			options:  []QueryOption{WithReponse("data")},
+			options:  []QueryOption{WithResponse("data")},
 			expected: queryOption{response: "data", input: ""},
 		},
 		{
 			name:     "With Both Options",
-			options:  []QueryOption{WithInputTitles("another title"), WithReponse("result")},
-			expected: queryOption{response: "result", input: base64.StdEncoding.EncodeToString([]byte("another title"))},
+			options:  []QueryOption{WithInputTitles(anotherTitle), WithResponse("result")},
+			expected: queryOption{response: "result", input: base64.StdEncoding.EncodeToString([]byte(anotherString))},
 		},
 	}
 

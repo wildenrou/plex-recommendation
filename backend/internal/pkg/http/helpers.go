@@ -37,7 +37,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 
 	// query the cache to see if we've asked for recommendations
 	// based on this exact recently viewed
-	resp, err := pg.QueryData(ctx, pg.WithInputTitles(buildStringFromSlice(titles)))
+	resp, err := pg.QueryData(ctx, pg.WithInputTitles(titles))
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		log.Println("could not query cache for these titles: ", err.Error())
@@ -52,7 +52,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 
 	span.AddEvent("no cached recommendation")
 
-	log.Println("embeding recently viewed...")
+	log.Println("embedding recently viewed...")
 	log.Println("embedding ", len(rvTexts), " texts")
 	rvEmbeddings, err := ollamaEmbedder.CreateEmbedding(ctx, rvTexts)
 	if err != nil {
@@ -62,7 +62,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 	span.AddEvent("embeddings complete")
 	log.Println("embeddings complete, querying database")
 
-	results, err := weaviate.VectorQuery(ctx, weaviate.VideoClass.Class, limit, rvEmbeddings)
+	results, err := weaviate.VectorQuery(ctx, weaviate.VideoClass.Class, rvEmbeddings)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
