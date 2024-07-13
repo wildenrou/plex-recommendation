@@ -62,7 +62,7 @@ func getRecommendation(ctx context.Context, section string, limit int) (string, 
 	span.AddEvent("embeddings complete")
 	log.Println("embeddings complete, querying database")
 
-	results, err := weaviate.VectorQuery(ctx, weaviate.VideoClass.Class, limit, rvEmbeddings)
+	results, err := weaviate.VectorQuery(ctx, weaviate.VideoClass.Class, rvEmbeddings)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", err

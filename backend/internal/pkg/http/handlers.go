@@ -4,15 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"log"
 	"net/http"
 	"strconv"
-
-	"github.com/wgeorgecook/plex-recommendation/internal/pkg/plex"
 )
+
+type llmResponse struct {
+	Videos        []*plex.VideoShort `json:"videos"`
+	Justification string             `json:"justification"`
+}
 
 func formatHttpError(err error) []byte {
 	return []byte(fmt.Sprintf(`{"error": "%s"}`, err.Error()))
@@ -47,7 +51,7 @@ func recommendationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	span.AddEvent("recommendation generated")
-	var respStruct []*plex.VideoShort
+	var respStruct *llmResponse
 	if err := json.Unmarshal([]byte(recommendation), &respStruct); err != nil {
 		w.Write(formatHttpError(err))
 		span.SetStatus(codes.Error, err.Error())
