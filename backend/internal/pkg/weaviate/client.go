@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"log"
-	"strings"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/tmc/langchaingo/llms/ollama"
@@ -207,7 +208,7 @@ func insertPlexMedia(ctx context.Context, c plex.Client, embedder *ollama.LLM) e
 	log.Println("performing migration on load...")
 	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Insert Plex Media"))
 	defer span.End()
-	vids, err := plex.GetAllVideos(ctx, c, "3")
+	vids, err := plex.GetAllVideos(ctx, c, c.GetDefaultLibrarySection())
 	if err != nil {
 		span.RecordError(err)
 		return err

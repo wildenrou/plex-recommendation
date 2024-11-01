@@ -73,7 +73,7 @@ func GetRecentlyPlayed(ctx context.Context, c Client, sectionId string, limit in
 	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("GetRecentlyPlayed"))
 	defer span.End()
 	log.Println("connecting to Plex...")
-	connectionUri := c.Connect(sectionId, !allMovies)
+	connectionUri := c.Connect(WithSectionID(sectionId))
 	log.Println("connected")
 	span.AddEvent("connected to Plex")
 
@@ -106,13 +106,14 @@ func GetRecentlyPlayed(ctx context.Context, c Client, sectionId string, limit in
 	return shorts, nil
 }
 
+
 func GetAllVideos(ctx context.Context, c Client, sectionId string) ([]VideoShort, error) {
 	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("GetAllVideos"))
 	defer span.End()
 
 	span.SetAttributes(attribute.String("package", "plex"))
 	log.Println("connecting to Plex...")
-	connectionUri := c.Connect(sectionId, allMovies)
+	connectionUri := c.Connect(WithSectionID(sectionId), WithAllMovies(allMovies))
 	log.Println("connected")
 	span.AddEvent("connected to plex")
 

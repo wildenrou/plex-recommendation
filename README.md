@@ -11,6 +11,13 @@ I run Plex on a Synology NAS using Package Center, so I found mine in
 
 Provide both of these to the `PLEX_ADDRESS` and `PLEX_TOKEN` environment variables.
 
+### Migrating Data 
+On initial boot, the system will detect if your Plex library is stored in the vector
+database. If it is not, your media will be retreived. You need to provide the default
+library to download media from via the `PLEX_DEFAULT_LIBRARY_SECTION` environment 
+variable. You will need to query Plex yourself to get this, but for me, my movies are
+in section 3. I will fall back to this section if you do not provide one.
+
 ## Connecting to your LLM
 This recommendation engine connects to Ollama. You can bring your own or 
 run it on the cloud. Just provide `OLLAMA_ADDRESS`, `OLLAMA_EMBEDDING_MODEL`, and `OLLAMA_LANGUAGE_MODEL` as 

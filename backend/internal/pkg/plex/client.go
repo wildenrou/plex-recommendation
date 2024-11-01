@@ -2,23 +2,26 @@ package plex
 
 import (
 	"context"
-	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type Client interface {
-	Connect(string, bool) string
+	Connect(...ConnectOption) string
+	GetDefaultLibrarySection() string
 	MakeNetworkRequest(context.Context, string, string) (*http.Response, error)
 }
 
 type PlexClient struct {
-	accessToken string
-	address     string
-	httpClient  *http.Client
+	accessToken           string
+	address               string
+	httpClient            *http.Client
+	defaultLibrarySection string
 }
 
 func New(accesstoken, address string) *PlexClient {
@@ -31,21 +34,56 @@ func New(accesstoken, address string) *PlexClient {
 	}
 }
 
+type connectOptions struct {
+	sectionId string
+	allMovies bool
+}
+type ConnectOption func(*connectOptions)
+
+func WithSectionID(sectionID string) ConnectOption {
+	return func(o *connectOptions) {
+		o.sectionId = sectionID
+	}
+}
+
+func WithAllMovies(allMovies bool) ConnectOption {
+	return func(o *connectOptions) {
+		o.allMovies = allMovies
+	}
+}
+
 // Connect returns a string with our address and token
 // for the provided sectionId
-func (pc PlexClient) Connect(sectionID string, allMovies bool) string {
+func (pc PlexClient) Connect(opts ...ConnectOption) string {
 	log.Println("generating connection string")
+	var options = connectOptions{}
+	for _, opt := range opts {
+		opt(&options)
+	}
 	endpoint := "/all"
-	if !allMovies {
+	if !options.allMovies {
 		endpoint = "/recentlyViewed"
 	}
+
+	sectionId := pc.defaultLibrarySection
+	if options.sectionId != "" {
+		sectionId = options.sectionId
+	}
+
 	return "http://" +
 		pc.address +
 		":32400/library/sections/" +
-		sectionID +
+		sectionId +
 		endpoint +
 		"?X-Plex-Token=" +
 		pc.accessToken
+}
+
+// GetDefaultLibrarySection returns the library section to
+// default to if none is provided on a request with section
+// options.
+func (pc PlexClient) GetDefaultLibrarySection() string {
+	return pc.defaultLibrarySection
 }
 
 // MakeNetworkRequest makes an HTTP request with the provided method

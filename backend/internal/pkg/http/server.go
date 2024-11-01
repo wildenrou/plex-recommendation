@@ -2,11 +2,12 @@ package httpinternal
 
 import (
 	"context"
+	"log"
+	"net/http"
+
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
-	"log"
-	"net/http"
 
 	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"

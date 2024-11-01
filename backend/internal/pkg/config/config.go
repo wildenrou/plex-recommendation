@@ -10,8 +10,9 @@ import (
 
 type Config struct {
 	Plex struct {
-		Token   string
-		Address string
+		Token                 string
+		Address               string
+		DefaultLibrarySection string
 	}
 	Ollama struct {
 		Address        string
@@ -38,6 +39,13 @@ func LoadConfig() *Config {
 	}
 	if os.Getenv("PLEX_ADDRESS") != "" {
 		cfg.Plex.Address = os.Getenv("PLEX_ADDRESS")
+	}
+
+	// My movies library is at section 3, so I have the default set to that if
+	// not provided via environment.
+	cfg.Plex.DefaultLibrarySection = "3"
+	if os.Getenv("PLEX_DEFAULT_LIBRARY_SECTION") != "" {
+		cfg.Plex.DefaultLibrarySection = os.Getenv("PLEX_DEFAULT_LIBRARY_SECTION")
 	}
 	if os.Getenv("OLLAMA_ADDRESS") != "" {
 		cfg.Ollama.Address = os.Getenv("OLLAMA_ADDRESS")
