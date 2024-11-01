@@ -77,7 +77,7 @@ func initPlex(ctx context.Context, c *config.Config) {
 		span.SetStatus(codes.Ok, "Plex client initialized previously")
 		return
 	}
-	plexClient = plex.New(c.Plex.Token, c.Plex.Address)
+	plexClient = plex.New(c.Plex.Token, c.Plex.Address, c.Plex.DefaultLibrarySection)
 	span.SetStatus(codes.Ok, "Plex client initialized")
 }
 
