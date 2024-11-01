@@ -24,13 +24,14 @@ type PlexClient struct {
 	defaultLibrarySection string
 }
 
-func New(accesstoken, address string) *PlexClient {
+func New(accesstoken, address, defaultLibrarySection string) *PlexClient {
 	return &PlexClient{
 		accessToken: accesstoken,
 		address:     address,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+		defaultLibrarySection: defaultLibrarySection,
 	}
 }
 

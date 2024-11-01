@@ -50,7 +50,7 @@ func TestPlexClientConnect(t *testing.T) {
 // TestPlexClientMakeNetworkRequest was written entirely
 // with an LLM.
 func TestPlexClientMakeNetworkRequest(t *testing.T) {
-	testClient := New("randomToken", "localhost")
+	testClient := New("randomToken", "localhost", "3")
 
 	testCases := []struct {
 		name       string
