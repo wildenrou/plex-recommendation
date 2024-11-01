@@ -39,7 +39,7 @@ func TestPlexClientConnect(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualURL := testClient.Connect(tc.sectionID, tc.allMovies)
+			actualURL := testClient.Connect(WithSectionID(tc.sectionID), WithAllMovies(tc.allMovies))
 			if actualURL != tc.expectedURL {
 				t.Errorf("URL mismatch for %s: expected %s, got %s", tc.name, tc.expectedURL, actualURL)
 			}
