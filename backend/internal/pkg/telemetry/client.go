@@ -3,6 +3,10 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"log"
+	"os"
+	"strconv"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -10,9 +14,36 @@ import (
 
 const otelName = "Plex Recommendation API"
 
+type shutdownFunc func(context.Context) error
+
+// noOp indicates the application should not
+// use tracing.
+var noOp bool
+
+// noOp shutdown does nothing, but prevents the
+// main function from panicking when it goes
+// to shutdown tracing when telemetry is disabled.
+var noOpShutdown = func(ctx context.Context) error {
+	return nil
+}
+
 // InitOtel bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func InitOtel(ctx context.Context, opts ...Option) (func(context.Context) error, error) {
+func InitOtel(ctx context.Context, opts ...Option) (shutdownFunc, error) {
+	if os.Getenv("DISABLE_TELEMETRY") != "" {
+		disableTelemetry, err := strconv.ParseBool(os.Getenv("DISABLE_TELEMETRY"))
+		if err != nil {
+			log.Println("detected non-bool value for DISABLE_TELEMETRY, telemetry will be enabled by default")
+		}
+		// in the event of an err, strconv.ParseBool returns false for the bool
+		// so this assignment is safe.
+		noOp = disableTelemetry
+	}
+
+	if noOp {
+		log.Println("DISABLE_TELEMETRY detected, returning no-op")
+		return noOpShutdown, nil
+	}
 
 	var options = telemetryOptions{}
 	for _, opt := range opts {
