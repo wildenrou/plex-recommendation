@@ -60,3 +60,7 @@ box, set `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=otlp://jaeger:4317` in the environm
 is started from Docker Compose. Traces are collected in Jaeger and accessible at `http://localhost:16686`. Metrics are 
 available to extend by passing the `telemetry.WithMeter` option `telemetry.InitOtel()`. You will have to instrument 
 metrics yourself. 
+
+#### Disabling Telemetry
+Telemetry can be disabled by setting `DISABLE_TELEMETRY=true` in your environment. Note that if using `docker compose up`, the 
+Jaeger container will still start. 
