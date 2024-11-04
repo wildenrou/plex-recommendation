@@ -35,7 +35,7 @@ func StartServer(ctx context.Context, c *config.Config, shutdownChan chan error)
 	if err := initVectorStore(ctx); err != nil {
 		panic("could not init vector store: " + err.Error())
 	}
-	if err := initCacheStore(ctx); err != nil {
+	if err := initCacheStore(ctx, c); err != nil {
 		panic("could not init cache store: " + err.Error())
 	}
 	initHttpServer(shutdownChan)
@@ -108,6 +108,6 @@ func initVectorStore(ctx context.Context) error {
 // initCacheStore connects to a database used for
 // storing responses from the LLM and the inputs
 // used to generate them.
-func initCacheStore(ctx context.Context) error {
-	return pg.InitPostgres(ctx)
+func initCacheStore(ctx context.Context, c *config.Config) error {
+	return pg.InitPostgres(ctx, c)
 }
