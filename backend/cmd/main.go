@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
 	httpinternal "github.com/wgeorgecook/plex-recommendation/internal/pkg/http"

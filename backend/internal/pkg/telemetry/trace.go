@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"context"
+	"time"
+
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -10,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	spanTracer "go.opentelemetry.io/otel/trace"
-	"time"
 
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
@@ -73,7 +74,13 @@ func WithRequestId(s string) SpanOption {
 	}
 }
 
+// StartSpan will initialize a new telemetry span with the provided context
+// and options. If telemetry is explicity disabled via DISABLE_TELEMETRY,
+// it will return the same context back with a no-op span.
 func StartSpan(ctx context.Context, opts ...SpanOption) (context.Context, spanTracer.Span) {
+	if noOp {
+		return ctx, spanTracer.SpanFromContext(ctx)
+	}
 	opt := &spanOption{}
 	for _, o := range opts {
 		o(opt)
