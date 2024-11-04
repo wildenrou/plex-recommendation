@@ -43,6 +43,18 @@ The titles provided from recently viewed get base-64 encoded and stored along
 with the normalized recomendation provided by the LLM. This cache is looked up 
 before requesting LLM recommendation and is returned as is if one is found.
 
+#### Default Postgres Environment
+The default Postgres environment is as follows:
+```
+POSTGRES_PASSWORD=postgres
+POSTGRES_USER=postgres
+POSTGRES_DB=caches
+POSTGRES_PORT=5432
+POSTGRES_HOST=postgres
+```
+You may override this by providing your own values to these environment
+variables
+
 
 ### Docker Compose
 There is a `docker-compose.yml` file in the root of this repo. You can run
