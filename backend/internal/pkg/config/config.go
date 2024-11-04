@@ -19,6 +19,13 @@ type Config struct {
 		LanguageModel  string
 		EmbeddingModel string
 	}
+	Postgres struct {
+		Host     string
+		Username string
+		Password string
+		DBName   string
+		Port     int
+	}
 	RecentMovieCount int
 }
 
@@ -29,6 +36,7 @@ func loadEnv() error {
 
 // LoadConfig creates a Config struct based on current environment
 func LoadConfig() *Config {
+	// TODO: this is getting out of hand. Implement https://github.com/caarlos0/env
 	if err := loadEnv(); err != nil {
 		log.Printf("load env error: %s\n", err.Error())
 	}
@@ -55,6 +63,36 @@ func LoadConfig() *Config {
 	}
 	if os.Getenv("OLLAMA_EMBEDDING_MODEL") != "" {
 		cfg.Ollama.EmbeddingModel = os.Getenv("OLLAMA_EMBEDDING_MODEL")
+	}
+
+	// Postgres values are defaulted to these initial values
+	// but overriden by environment
+	cfg.Postgres.Host = "postgres"
+	if os.Getenv("POSTGRES_HOST") != "" {
+		cfg.Postgres.Host = os.Getenv("POSTGRES_HOST")
+	}
+
+	cfg.Postgres.Port = 5432
+	port, err := strconv.Atoi(os.Getenv("POSTGRES_PORT"))
+	if err != nil {
+		log.Println("POSTGRES_PORT set but to no-int value")
+	} else {
+		cfg.Postgres.Port = port
+	}
+
+	cfg.Postgres.Username = "postgres"
+	if os.Getenv("POSTGRES_USER") != "" {
+		cfg.Postgres.Username = os.Getenv("POSTGRES_USER")
+	}
+
+	cfg.Postgres.Password = "postgres"
+	if os.Getenv("POSTGRES_PASSWORD") != "" {
+		cfg.Postgres.Password = os.Getenv("POSTGRES_PASSWORD")
+	}
+
+	cfg.Postgres.DBName = "caches"
+	if os.Getenv("POSTGRES_DB") != "" {
+		cfg.Postgres.DBName = os.Getenv("POSTGRES_DB")
 	}
 
 	recentMovieCountStr := os.Getenv("RECENT_MOVIE_COUNT")

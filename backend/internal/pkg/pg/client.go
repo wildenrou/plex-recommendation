@@ -2,11 +2,14 @@ package pg
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"slices"
+
+	"github.com/wgeorgecook/plex-recommendation/internal/pkg/config"
 	"github.com/wgeorgecook/plex-recommendation/internal/pkg/telemetry"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"log"
-	"slices"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -14,14 +17,15 @@ import (
 
 var client *gorm.DB
 
-func InitPostgres(ctx context.Context) error {
+func InitPostgres(ctx context.Context, c *config.Config) error {
 	ctx, span := telemetry.StartSpan(ctx, telemetry.WithSpanName("Init Postgres"), telemetry.WithSpanPackage("pg"))
 	defer span.End()
 	if client != nil {
 		span.SetStatus(codes.Ok, "Connected to Postgres Previously")
 		return nil
 	}
-	dsn := "host=postgres user=postgres password=postgres dbname=caches port=5432 sslmode=disable"
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable",
+		c.Postgres.Host, c.Postgres.Username, c.Postgres.Password, c.Postgres.DBName, c.Postgres.Port)
 	var err error
 	client, err = gorm.Open(postgres.Open(dsn))
 	if err != nil {
